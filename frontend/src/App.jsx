@@ -129,7 +129,7 @@ function App() {
         {/* LIVE MEETING ROOM */}
 
         <Route
-          path="/meeting"
+          path="/meeting/:roomId"
           element={<MeetingRoom />}
         />
 

@@ -4,7 +4,7 @@ import { HiMenuAlt3, HiX } from "react-icons/hi";
 import LoginModal from "./LoginModal";
 import SignupModal from "./SignupModal";
 
-import { AuthContext } from "../context/AuthContext";
+import { AuthContext } from "../context/AuthContextValue";
 
 const Navbar = () => {
 
