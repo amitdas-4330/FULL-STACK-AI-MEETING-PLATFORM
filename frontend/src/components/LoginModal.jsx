@@ -3,7 +3,11 @@ import { useContext, useState } from "react";
 import API from "../api/axios";
 import { AuthContext } from "../context/AuthContextValue";
 
-const LoginModal = ({ setShowLogin }) => {
+const LoginModal = ({
+  setShowLogin,
+  setShowSignup,
+  message,
+}) => {
 
   const { login } = useContext(AuthContext);
 
@@ -58,9 +62,15 @@ const LoginModal = ({ setShowLogin }) => {
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center px-4">
       <div className="bg-slate-900 w-full max-w-[400px] p-8 rounded-3xl border border-slate-700">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold">
-            Login
-          </h1>
+          <div>
+            <h1 className="text-3xl font-bold">
+              Login
+            </h1>
+
+            <p className="text-sm text-gray-400 mt-2">
+              {message || "Sign in to continue."}
+            </p>
+          </div>
 
           <button
             type="button"
@@ -106,6 +116,19 @@ const LoginModal = ({ setShowLogin }) => {
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
+
+        {setShowSignup && (
+          <button
+            type="button"
+            onClick={() => {
+              setShowLogin(false);
+              setShowSignup(true);
+            }}
+            className="w-full mt-4 text-sm text-indigo-300 hover:text-indigo-200"
+          >
+            Need an account? Create one
+          </button>
+        )}
       </div>
     </div>
   );

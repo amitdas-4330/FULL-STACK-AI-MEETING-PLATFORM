@@ -164,6 +164,53 @@ const emitMeetingSettings = (roomId) => {
 
 };
 
+const normalizeAudioBuffer = (audioChunk) => {
+
+  if (Buffer.isBuffer(audioChunk)) {
+    return audioChunk;
+  }
+
+  if (audioChunk instanceof ArrayBuffer) {
+    return Buffer.from(audioChunk);
+  }
+
+  if (ArrayBuffer.isView(audioChunk)) {
+    return Buffer.from(
+      audioChunk.buffer,
+      audioChunk.byteOffset,
+      audioChunk.byteLength
+    );
+  }
+
+  if (
+    audioChunk &&
+    Array.isArray(audioChunk.data)
+  ) {
+    return Buffer.from(audioChunk.data);
+  }
+
+  return Buffer.alloc(0);
+
+};
+
+const getAudioFilename = (mimeType = "") => {
+
+  if (mimeType.includes("mp4")) {
+    return "meeting-audio.mp4";
+  }
+
+  if (mimeType.includes("mpeg")) {
+    return "meeting-audio.mp3";
+  }
+
+  if (mimeType.includes("wav")) {
+    return "meeting-audio.wav";
+  }
+
+  return "meeting-audio.webm";
+
+};
+
 const readAiError = async (response) => {
 
   try {
@@ -181,6 +228,55 @@ const readAiError = async (response) => {
     return `AI server returned ${response.status}`;
 
   }
+
+};
+
+const createSummaryForRoom = async (roomId) => {
+
+  ensureRoom(roomId);
+
+  if (!roomTranscripts[roomId].length) {
+    return {
+      id: Date.now(),
+      summary: "No transcript was captured for this meeting.",
+      createdAt: new Date(),
+    };
+  }
+
+  const response = await fetch(
+    `${AI_SERVER_URL}/summary`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        transcript:
+          roomTranscripts[roomId],
+        attendance:
+          calculateAttendance(roomId),
+        attendanceThresholdMinutes:
+          roomSettings[roomId]
+            .attendanceThresholdMinutes,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await readAiError(response)
+    );
+  }
+
+  const result = await response.json();
+
+  return {
+    id: Date.now(),
+    summary:
+      result.summary ||
+      "No summary was generated for this meeting.",
+    createdAt: new Date(),
+  };
 
 };
 
@@ -384,7 +480,7 @@ io.on("connection", (socket) => {
         return;
       }
 
-      const buffer = Buffer.from(audioChunk);
+      const buffer = normalizeAudioBuffer(audioChunk);
 
       if (!buffer.length) {
         return;
@@ -402,7 +498,7 @@ io.on("connection", (socket) => {
               "audio/webm",
           }
         ),
-        "meeting-audio.webm"
+        getAudioFilename(mimeType)
       );
 
       formData.append("roomId", roomId);
@@ -504,38 +600,8 @@ io.on("connection", (socket) => {
 
       ensureRoom(roomId);
 
-      const response = await fetch(
-        `${AI_SERVER_URL}/summary`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            transcript:
-              roomTranscripts[roomId],
-            attendance:
-              calculateAttendance(roomId),
-            attendanceThresholdMinutes:
-              roomSettings[roomId]
-                .attendanceThresholdMinutes,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          await readAiError(response)
-        );
-      }
-
-      const result = await response.json();
-
-      const summaryItem = {
-        id: Date.now(),
-        summary: result.summary,
-        createdAt: new Date(),
-      };
+      const summaryItem =
+        await createSummaryForRoom(roomId);
 
       roomSummaries[roomId].push(summaryItem);
 
@@ -601,20 +667,6 @@ io.on("connection", (socket) => {
 
     ensureRoom(roomId);
 
-    if (
-      roomSettings[roomId].hostSocketId !==
-      socket.id
-    ) {
-      socket.emit(
-        "attendance-error",
-        {
-          message:
-            "Only the host can update attendance time",
-        }
-      );
-      return;
-    }
-
     const parsedMinutes = Number(minutes);
 
     if (
@@ -637,6 +689,89 @@ io.on("connection", (socket) => {
 
     emitMeetingSettings(roomId);
     emitAttendance(roomId);
+
+  });
+
+  // ======================================================
+  // ================= STOP MEETING =======================
+  // ======================================================
+
+  socket.on("stop-meeting", async (data) => {
+
+    const { roomId } = data;
+
+    ensureRoom(roomId);
+
+    if (
+      roomSettings[roomId].hostSocketId !==
+      socket.id
+    ) {
+      socket.emit(
+        "meeting-error",
+        {
+          message:
+            "Only the host can stop the meeting",
+        }
+      );
+      return;
+    }
+
+    const finalAttendance =
+      calculateAttendance(roomId);
+    let finalSummary =
+      roomSummaries[roomId][
+        roomSummaries[roomId].length - 1
+      ];
+
+    if (!finalSummary) {
+      try {
+        finalSummary =
+          await createSummaryForRoom(roomId);
+
+        roomSummaries[roomId].push(finalSummary);
+
+        io.to(roomId).emit(
+          "receive-summary",
+          finalSummary
+        );
+      } catch {
+        finalSummary = {
+          id: Date.now(),
+          summary:
+            "Summary could not be generated automatically.",
+          createdAt: new Date(),
+        };
+      }
+    }
+
+    io.to(roomId).emit(
+      "meeting-ended",
+      {
+        roomId,
+        endedBy: socket.id,
+        endedAt: new Date(),
+        report: {
+          roomId,
+          attendance: finalAttendance,
+          summary: finalSummary.summary,
+          summaryCreatedAt:
+            finalSummary.createdAt,
+          attendanceThresholdMinutes:
+            roomSettings[roomId]
+              .attendanceThresholdMinutes,
+        },
+      }
+    );
+
+    meetingUsers[roomId].forEach((user) => {
+      io.sockets.sockets
+        .get(user.socketId)
+        ?.leave(roomId);
+    });
+
+    delete meetingUsers[roomId];
+    delete roomAttendance[roomId];
+    delete roomSettings[roomId];
 
   });
 

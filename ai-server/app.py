@@ -10,6 +10,7 @@ from fpdf import FPDF
 import tempfile
 import os
 import json
+from pathlib import Path
 
 load_dotenv()
 
@@ -92,6 +93,28 @@ def normalize_transcript(transcript):
 
     return transcript or ""
 
+
+def get_audio_suffix(audio_file):
+
+    suffix = Path(audio_file.filename or "").suffix
+
+    if suffix:
+        return suffix
+
+    if audio_file.mimetype == "audio/mp4":
+        return ".mp4"
+
+    if audio_file.mimetype in [
+        "audio/mpeg",
+        "audio/mp3"
+    ]:
+        return ".mp3"
+
+    if audio_file.mimetype == "audio/wav":
+        return ".wav"
+
+    return ".webm"
+
 # ======================================================
 # TRANSCRIPTION
 # ======================================================
@@ -105,6 +128,8 @@ def transcribe_audio():
         }), 400
 
     audio_file = request.files["audio"]
+    speaker = request.form.get("speaker", "Unknown")
+    user_id = request.form.get("userId", "")
 
     temp_audio_path = None
 
@@ -112,7 +137,7 @@ def transcribe_audio():
 
         with tempfile.NamedTemporaryFile(
             delete=False,
-            suffix=".webm"
+            suffix=get_audio_suffix(audio_file)
         ) as temp_audio:
 
             temp_audio_path = temp_audio.name
@@ -126,6 +151,8 @@ def transcribe_audio():
             )
 
         return jsonify({
+            "speaker": speaker,
+            "userId": user_id,
             "transcript": transcript.text
         })
 
@@ -178,7 +205,7 @@ def transcribe_audio_chunk():
 
         with tempfile.NamedTemporaryFile(
             delete=False,
-            suffix=".webm"
+            suffix=get_audio_suffix(audio_file)
         ) as temp_audio:
 
             temp_audio_path = temp_audio.name
@@ -275,28 +302,23 @@ def generate_summary():
 
         response = client.chat.completions.create(
             model="gpt-4.1-mini",
+            max_tokens=160,
             messages=[
                 {
                     "role": "system",
                     "content": """
-                    Create professional meeting summary.
-
-                    Include:
-                    - Main discussion points
-                    - Decisions
-                    - Action items
-                    - Attendance insight based on the host threshold
-                    - Languages used in the meeting when visible
+                    Create a short meeting summary.
+                    Keep it under 5 lines and under 80 words.
+                    Focus only on the most important discussion,
+                    decisions and action items. Do not add long
+                    explanations or headings.
                     """
                 },
                 {
                     "role": "user",
                     "content": f"""
-                    Attendance threshold:
-                    {attendance_threshold} minutes
-
-                    Attendance:
-                    {attendance_text}
+                    Attendance threshold: {attendance_threshold} minutes
+                    Attendance: {attendance_text}
 
                     Transcript:
                     {transcript}

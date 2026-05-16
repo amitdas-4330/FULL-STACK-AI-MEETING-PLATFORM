@@ -6,9 +6,13 @@ import {
   useState,
 } from "react";
 
-import { useParams } from "react-router-dom";
+import {
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 
 import Peer from "simple-peer";
+import { useContext } from "react";
 
 import {
   FaClock,
@@ -23,7 +27,9 @@ import {
 } from "react-icons/fa";
 
 import socket from "../socket";
+import { AuthContext } from "../context/AuthContextValue";
 import {
+  saveMeetingAttendance,
   saveMeetingSummaries,
   saveMeetingTranscripts,
 } from "../utils/meetingHistory";
@@ -52,6 +58,8 @@ const getStoredUser = () => {
 const MeetingRoom = () => {
 
   const { roomId } = useParams();
+  const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
 
   const [guestId] = useState(
     () => `guest-${Date.now()}`
@@ -184,8 +192,17 @@ const MeetingRoom = () => {
 
   const startAiRecording = useCallback(() => {
 
+    if (recordingActiveRef.current) {
+      return;
+    }
+
     if (!stream) {
       setAiStatus("Camera and mic are not ready yet.");
+      return;
+    }
+
+    if (!window.MediaRecorder) {
+      setAiStatus("Your browser does not support audio recording.");
       return;
     }
 
@@ -197,11 +214,17 @@ const MeetingRoom = () => {
     }
 
     const audioStream = new MediaStream(audioTracks);
-    const mimeType = MediaRecorder.isTypeSupported(
-      "audio/webm;codecs=opus"
-    )
-      ? "audio/webm;codecs=opus"
-      : "audio/webm";
+    const supportedMimeType = [
+      "audio/webm;codecs=opus",
+      "audio/webm",
+      "audio/mp4",
+    ].find((type) => MediaRecorder.isTypeSupported(type));
+    const mimeType = supportedMimeType || "audio/webm";
+    const recorderOptions = supportedMimeType
+      ? {
+          mimeType: supportedMimeType,
+        }
+      : undefined;
 
     const sendCompleteAudioBlob = async (blob) => {
 
@@ -229,12 +252,19 @@ const MeetingRoom = () => {
 
       recorderChunksRef.current = [];
 
-      const recorder = new MediaRecorder(
-        audioStream,
-        {
-          mimeType,
-        }
-      );
+      let recorder;
+
+      try {
+        recorder = new MediaRecorder(
+          audioStream,
+          recorderOptions
+        );
+      } catch {
+        recordingActiveRef.current = false;
+        setAiRecording(false);
+        setAiStatus("Could not start audio recording.");
+        return;
+      }
 
       recorderRef.current = recorder;
 
@@ -286,6 +316,40 @@ const MeetingRoom = () => {
 
   }, [currentUser.id, currentUser.name, roomId, stream]);
 
+  const stopLocalMeeting = useCallback(() => {
+
+    stopAiRecording();
+
+    peersRef.current.forEach((item) => {
+      item.peer.destroy();
+    });
+
+    peersRef.current = [];
+    refreshPeers();
+
+    if (stream) {
+      stream.getTracks().forEach((track) => {
+        track.stop();
+      });
+    }
+
+  }, [refreshPeers, stopAiRecording, stream]);
+
+  const stopMeeting = () => {
+
+    if (!meetingSettings.isHost) {
+      setAiStatus("Only the host can stop the meeting.");
+      return;
+    }
+
+    setAiStatus("Stopping meeting...");
+
+    socket.emit("stop-meeting", {
+      roomId,
+    });
+
+  };
+
   const toggleAiRecording = () => {
 
     if (aiRecording) {
@@ -299,6 +363,13 @@ const MeetingRoom = () => {
   };
 
   useEffect(() => {
+
+    if (!user) {
+      navigate("/", {
+        replace: true,
+      });
+      return;
+    }
 
     let mounted = true;
     let localStream = null;
@@ -455,6 +526,8 @@ const MeetingRoom = () => {
     refreshPeers,
     roomId,
     stopAiRecording,
+    user,
+    navigate,
   ]);
 
   useEffect(() => {
@@ -496,6 +569,7 @@ const MeetingRoom = () => {
 
     socket.on("attendance-update", (data) => {
       setAttendance(data);
+      saveMeetingAttendance(roomId, data);
     });
 
     socket.on("meeting-settings", (data) => {
@@ -511,6 +585,54 @@ const MeetingRoom = () => {
       setAiStatus(data.message);
     });
 
+    socket.on("meeting-error", (data) => {
+      setAiStatus(data.message);
+    });
+
+    socket.on("meeting-ended", (data) => {
+      const report = data.report || {};
+      const reportRoomId = report.roomId || roomId;
+      const finalAttendance = report.attendance || [];
+
+      if (finalAttendance.length) {
+        setAttendance(finalAttendance);
+        saveMeetingAttendance(
+          reportRoomId,
+          finalAttendance
+        );
+      }
+
+      if (report.summary) {
+        setSummaries((prev) => {
+          const alreadySaved = prev.some(
+            (item) =>
+              item.summary === report.summary
+          );
+          const next = alreadySaved
+            ? prev
+            : [
+                ...prev,
+                {
+                  id: Date.now(),
+                  summary: report.summary,
+                  createdAt:
+                    report.summaryCreatedAt ||
+                    new Date().toISOString(),
+                },
+              ];
+
+          saveMeetingSummaries(reportRoomId, next);
+          return next;
+        });
+      }
+
+      setAiStatus("Meeting ended. Report saved.");
+      stopLocalMeeting();
+      navigate("/", {
+        replace: true,
+      });
+    });
+
     return () => {
       socket.off("chat-history");
       socket.off("receive-message");
@@ -522,9 +644,11 @@ const MeetingRoom = () => {
       socket.off("meeting-settings");
       socket.off("ai-error");
       socket.off("attendance-error");
+      socket.off("meeting-error");
+      socket.off("meeting-ended");
     };
 
-  }, [roomId]);
+  }, [navigate, roomId, stopLocalMeeting]);
 
   const sendMessage = () => {
 
@@ -586,6 +710,22 @@ const MeetingRoom = () => {
   const latestSummary =
     summaries[summaries.length - 1]?.summary;
 
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md text-center">
+          <h1 className="text-2xl font-bold mb-2">
+            Login required
+          </h1>
+
+          <p className="text-gray-400 text-sm">
+            Please login before starting or joining a meeting.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-white">
 
@@ -616,6 +756,20 @@ const MeetingRoom = () => {
           >
             {aiRecording ? <FaStop /> : <FaRobot />}
             {aiRecording ? "Stop AI" : "Start AI"}
+          </button>
+
+          <button
+            onClick={stopMeeting}
+            disabled={!meetingSettings.isHost}
+            title={
+              meetingSettings.isHost
+                ? "Stop meeting for everyone"
+                : "Only the host can stop the meeting"
+            }
+            className="px-4 py-3 rounded-xl flex items-center gap-2 bg-red-700 disabled:bg-slate-700 disabled:text-gray-400"
+          >
+            <FaStop />
+            Stop Meeting
           </button>
         </div>
 
@@ -693,26 +847,24 @@ const MeetingRoom = () => {
               </span>
             </div>
 
-            {meetingSettings.isHost && (
-              <div className="grid grid-cols-4 gap-2 mb-4">
-                {ATTENDANCE_OPTIONS.map((minutes) => (
-                  <button
-                    key={minutes}
-                    onClick={() =>
-                      updateAttendanceThreshold(minutes)
-                    }
-                    className={`py-2 rounded-xl text-sm ${
-                      meetingSettings.attendanceThresholdMinutes ===
-                      minutes
-                        ? "bg-indigo-600"
-                        : "bg-slate-800"
-                    }`}
-                  >
-                    {minutes}m
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="grid grid-cols-4 gap-2 mb-4">
+              {ATTENDANCE_OPTIONS.map((minutes) => (
+                <button
+                  key={minutes}
+                  onClick={() =>
+                    updateAttendanceThreshold(minutes)
+                  }
+                  className={`py-2 rounded-xl text-sm ${
+                    meetingSettings.attendanceThresholdMinutes ===
+                    minutes
+                      ? "bg-indigo-600"
+                      : "bg-slate-800"
+                  }`}
+                >
+                  {minutes}m
+                </button>
+              ))}
+            </div>
 
             <div className="space-y-3 max-h-[220px] overflow-y-auto">
               {attendance.map((user) => (
@@ -794,7 +946,7 @@ const MeetingRoom = () => {
 
             <div className="bg-slate-800 rounded-2xl p-4 min-h-[120px] whitespace-pre-wrap text-sm text-gray-200">
               {latestSummary ||
-                "Start AI transcription, then generate a meeting summary."}
+                "Generate a short summary from the meeting transcript."}
             </div>
           </section>
 

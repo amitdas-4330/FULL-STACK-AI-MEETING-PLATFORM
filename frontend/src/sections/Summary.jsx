@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { FaDownload } from "react-icons/fa";
 
 import { getLatestMeetingRoom } from "../utils/meetingHistory";
+import { downloadMeetingReport } from "../utils/meetingReportPdf";
 
 const Summary = () => {
 
@@ -40,14 +42,33 @@ const Summary = () => {
   const latestSummary =
     summaries[summaries.length - 1];
 
+  const handleDownloadPdf = () => {
+
+    if (!latestRoom || !latestSummary) {
+      return;
+    }
+
+    downloadMeetingReport({
+      roomId: latestRoom.roomId,
+      summary: latestSummary.summary,
+      summaryCreatedAt: latestSummary.createdAt,
+      attendance: latestRoom.attendance || [],
+      endedAt:
+        latestRoom.updatedAt ||
+        latestSummary.createdAt ||
+        new Date().toISOString(),
+    });
+
+  };
+
   return (
-    <div className="bg-slate-900 rounded-3xl p-6 sm:p-8 min-h-[500px]">
-      <div className="flex flex-col gap-3 mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold">
+    <div className="bg-slate-900 rounded-2xl p-5 sm:p-6 border border-slate-800">
+      <div className="flex flex-col gap-2 mb-5">
+        <h1 className="text-2xl sm:text-3xl font-bold">
           AI Summary
         </h1>
 
-        <p className="text-gray-300 max-w-3xl leading-7">
+        <p className="text-gray-400 text-sm max-w-3xl leading-6">
           {latestRoom
             ? `Latest saved room: ${latestRoom.roomId}`
             : "Generate a summary inside a meeting to see it here."}
@@ -55,29 +76,39 @@ const Summary = () => {
       </div>
 
       {latestSummary ? (
-        <div className="space-y-5">
-          <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700">
+        <div className="space-y-4">
+          <div className="bg-slate-800 p-5 rounded-xl border border-slate-700">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
               <h3 className="text-indigo-300 font-bold">
-                Latest Summary
+                Short Summary
               </h3>
 
-              <span className="text-xs text-gray-400">
-                {latestSummary.createdAt
-                  ? new Date(
-                      latestSummary.createdAt
-                    ).toLocaleString()
-                  : ""}
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-gray-400">
+                  {latestSummary.createdAt
+                    ? new Date(
+                        latestSummary.createdAt
+                      ).toLocaleString()
+                    : ""}
+                </span>
+
+                <button
+                  onClick={handleDownloadPdf}
+                  className="bg-indigo-600 hover:bg-indigo-500 px-3 py-2 rounded-lg text-sm flex items-center gap-2"
+                >
+                  <FaDownload />
+                  PDF
+                </button>
+              </div>
             </div>
 
-            <div className="whitespace-pre-wrap text-gray-200 leading-7">
+            <div className="whitespace-pre-wrap text-gray-200 text-sm leading-6">
               {latestSummary.summary}
             </div>
           </div>
 
           {summaries.length > 1 && (
-            <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700">
+            <div className="bg-slate-800 p-5 rounded-xl border border-slate-700">
               <h3 className="font-bold mb-3">
                 Summary History
               </h3>
@@ -109,7 +140,7 @@ const Summary = () => {
           )}
         </div>
       ) : (
-        <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 text-gray-300">
+        <div className="bg-slate-800 p-5 rounded-xl border border-slate-700 text-gray-300">
           No summary saved yet. Open a meeting room, collect
           transcript lines, click Generate in the Summary panel,
           then return here.

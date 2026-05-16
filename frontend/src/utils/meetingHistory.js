@@ -87,3 +87,25 @@ export const saveMeetingSummaries = (
   writeMeetingHistory(history);
 
 };
+
+export const saveMeetingAttendance = (
+  roomId,
+  attendance
+) => {
+
+  const history = readMeetingHistory();
+  const existingRoom = history.rooms[roomId] || {};
+
+  history.rooms[roomId] = {
+    ...existingRoom,
+    roomId,
+    transcripts: existingRoom.transcripts || [],
+    summaries: existingRoom.summaries || [],
+    attendance,
+    updatedAt: new Date().toISOString(),
+  };
+  history.latestRoomId = roomId;
+
+  writeMeetingHistory(history);
+
+};
