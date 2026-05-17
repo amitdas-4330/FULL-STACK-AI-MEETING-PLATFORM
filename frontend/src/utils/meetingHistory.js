@@ -38,6 +38,16 @@ const writeMeetingHistory = (history) => {
 
 };
 
+export const clearMeetingHistory = () => {
+
+  localStorage.removeItem(HISTORY_KEY);
+
+  window.dispatchEvent(
+    new CustomEvent("meeting-history-updated")
+  );
+
+};
+
 export const getLatestMeetingRoom = () => {
 
   const history = readMeetingHistory();
@@ -103,6 +113,42 @@ export const saveMeetingAttendance = (
     summaries: existingRoom.summaries || [],
     attendance,
     updatedAt: new Date().toISOString(),
+  };
+  history.latestRoomId = roomId;
+
+  writeMeetingHistory(history);
+
+};
+
+export const saveMeetingReport = (
+  roomId,
+  {
+    transcripts = [],
+    summaries = [],
+    attendance = [],
+    updatedAt = new Date().toISOString(),
+  }
+) => {
+
+  const history = readMeetingHistory();
+  const existingRoom = history.rooms[roomId] || {};
+
+  history.rooms[roomId] = {
+    ...existingRoom,
+    roomId,
+    transcripts:
+      transcripts.length > 0
+        ? transcripts
+        : existingRoom.transcripts || [],
+    summaries:
+      summaries.length > 0
+        ? summaries
+        : existingRoom.summaries || [],
+    attendance:
+      attendance.length > 0
+        ? attendance
+        : existingRoom.attendance || [],
+    updatedAt,
   };
   history.latestRoomId = roomId;
 

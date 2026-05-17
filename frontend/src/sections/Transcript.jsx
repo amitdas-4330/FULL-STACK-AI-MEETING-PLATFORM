@@ -1,18 +1,23 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 
+import { AuthContext } from "../context/AuthContextValue";
 import { getLatestMeetingRoom } from "../utils/meetingHistory";
 
 const Transcript = () => {
 
+  const { user } = useContext(AuthContext);
+
   const [latestRoom, setLatestRoom] = useState(
-    () => getLatestMeetingRoom()
+    () => user ? getLatestMeetingRoom() : null
   );
 
   useEffect(() => {
 
     const refreshHistory = () => {
-      setLatestRoom(getLatestMeetingRoom());
+      setLatestRoom(user ? getLatestMeetingRoom() : null);
     };
+
+    refreshHistory();
 
     window.addEventListener(
       "meeting-history-updated",
@@ -34,7 +39,7 @@ const Transcript = () => {
       );
     };
 
-  }, []);
+  }, [user]);
 
   const transcripts = latestRoom?.transcripts || [];
 

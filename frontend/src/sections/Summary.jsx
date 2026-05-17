@@ -1,20 +1,29 @@
-import { useEffect, useState } from "react";
+import {
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { FaDownload } from "react-icons/fa";
 
+import { AuthContext } from "../context/AuthContextValue";
 import { getLatestMeetingRoom } from "../utils/meetingHistory";
 import { downloadMeetingReport } from "../utils/meetingReportPdf";
 
 const Summary = () => {
 
+  const { user } = useContext(AuthContext);
+
   const [latestRoom, setLatestRoom] = useState(
-    () => getLatestMeetingRoom()
+    () => user ? getLatestMeetingRoom() : null
   );
 
   useEffect(() => {
 
     const refreshHistory = () => {
-      setLatestRoom(getLatestMeetingRoom());
+      setLatestRoom(user ? getLatestMeetingRoom() : null);
     };
+
+    refreshHistory();
 
     window.addEventListener(
       "meeting-history-updated",
@@ -36,7 +45,7 @@ const Summary = () => {
       );
     };
 
-  }, []);
+  }, [user]);
 
   const summaries = latestRoom?.summaries || [];
   const latestSummary =

@@ -30,6 +30,7 @@ import socket from "../socket";
 import { AuthContext } from "../context/AuthContextValue";
 import {
   saveMeetingAttendance,
+  saveMeetingReport,
   saveMeetingSummaries,
   saveMeetingTranscripts,
 } from "../utils/meetingHistory";
@@ -100,6 +101,8 @@ const MeetingRoom = () => {
 
   const userVideo = useRef(null);
   const peersRef = useRef([]);
+  const transcriptsRef = useRef([]);
+  const summariesRef = useRef([]);
   const recorderRef = useRef(null);
   const recorderTimerRef = useRef(null);
   const recorderChunksRef = useRef([]);
@@ -116,6 +119,18 @@ const MeetingRoom = () => {
     );
 
   }, []);
+
+  useEffect(() => {
+
+    transcriptsRef.current = transcripts;
+
+  }, [transcripts]);
+
+  useEffect(() => {
+
+    summariesRef.current = summaries;
+
+  }, [summaries]);
 
   const createPeer = useCallback(
     (userToSignal, callerId, currentStream) => {
@@ -397,24 +412,6 @@ const MeetingRoom = () => {
 
         socket.on("meeting-users", (users) => {
 
-          const livePeerIds = users
-            .filter((user) => user.socketId !== socket.id)
-            .map((user) => user.socketId);
-
-          peersRef.current =
-            peersRef.current.filter((item) => {
-
-              const stillLive =
-                livePeerIds.includes(item.peerId);
-
-              if (!stillLive) {
-                item.peer.destroy();
-              }
-
-              return stillLive;
-
-            });
-
           users.forEach((user) => {
 
             if (user.socketId === socket.id) return;
@@ -443,6 +440,24 @@ const MeetingRoom = () => {
             });
 
           });
+
+          refreshPeers();
+
+        });
+
+        socket.on("user-left", (socketId) => {
+
+          peersRef.current =
+            peersRef.current.filter((item) => {
+
+              if (item.peerId === socketId) {
+                item.peer.destroy();
+                return false;
+              }
+
+              return true;
+
+            });
 
           refreshPeers();
 
@@ -502,6 +517,7 @@ const MeetingRoom = () => {
       stopAiRecording();
 
       socket.off("meeting-users");
+      socket.off("user-left");
       socket.off("user-joined");
       socket.off("receiving-returned-signal");
 
@@ -541,6 +557,7 @@ const MeetingRoom = () => {
     });
 
     socket.on("transcript-history", (history) => {
+      transcriptsRef.current = history;
       setTranscripts(history);
       saveMeetingTranscripts(roomId, history);
     });
@@ -548,12 +565,14 @@ const MeetingRoom = () => {
     socket.on("receive-transcript", (data) => {
       setTranscripts((prev) => {
         const next = [...prev, data];
+        transcriptsRef.current = next;
         saveMeetingTranscripts(roomId, next);
         return next;
       });
     });
 
     socket.on("summary-history", (history) => {
+      summariesRef.current = history;
       setSummaries(history);
       saveMeetingSummaries(roomId, history);
     });
@@ -562,6 +581,7 @@ const MeetingRoom = () => {
       setSummaryLoading(false);
       setSummaries((prev) => {
         const next = [...prev, data];
+        summariesRef.current = next;
         saveMeetingSummaries(roomId, next);
         return next;
       });
@@ -593,6 +613,32 @@ const MeetingRoom = () => {
       const report = data.report || {};
       const reportRoomId = report.roomId || roomId;
       const finalAttendance = report.attendance || [];
+      const endedAt =
+        data.endedAt || new Date().toISOString();
+      const savedTranscripts = transcriptsRef.current;
+      const savedSummaries = summariesRef.current;
+
+      const finalSummaries = report.summary
+        ? [
+            ...savedSummaries.filter(
+              (item) =>
+                item.summary !== report.summary
+            ),
+            {
+              id: Date.now(),
+              summary: report.summary,
+              createdAt:
+                report.summaryCreatedAt || endedAt,
+            },
+          ]
+        : savedSummaries;
+
+      saveMeetingReport(reportRoomId, {
+        transcripts: savedTranscripts,
+        summaries: finalSummaries,
+        attendance: finalAttendance,
+        updatedAt: endedAt,
+      });
 
       if (finalAttendance.length) {
         setAttendance(finalAttendance);
@@ -603,27 +649,12 @@ const MeetingRoom = () => {
       }
 
       if (report.summary) {
-        setSummaries((prev) => {
-          const alreadySaved = prev.some(
-            (item) =>
-              item.summary === report.summary
-          );
-          const next = alreadySaved
-            ? prev
-            : [
-                ...prev,
-                {
-                  id: Date.now(),
-                  summary: report.summary,
-                  createdAt:
-                    report.summaryCreatedAt ||
-                    new Date().toISOString(),
-                },
-              ];
-
-          saveMeetingSummaries(reportRoomId, next);
-          return next;
-        });
+        summariesRef.current = finalSummaries;
+        setSummaries(finalSummaries);
+        saveMeetingSummaries(
+          reportRoomId,
+          finalSummaries
+        );
       }
 
       setAiStatus("Meeting ended. Report saved.");
@@ -854,12 +885,18 @@ const MeetingRoom = () => {
                   onClick={() =>
                     updateAttendanceThreshold(minutes)
                   }
+                  disabled={!meetingSettings.isHost}
+                  title={
+                    meetingSettings.isHost
+                      ? `Set attendance time to ${minutes} minutes`
+                      : "Only the host can change attendance time"
+                  }
                   className={`py-2 rounded-xl text-sm ${
                     meetingSettings.attendanceThresholdMinutes ===
                     minutes
                       ? "bg-indigo-600"
                       : "bg-slate-800"
-                  }`}
+                  } disabled:cursor-not-allowed disabled:opacity-50`}
                 >
                   {minutes}m
                 </button>

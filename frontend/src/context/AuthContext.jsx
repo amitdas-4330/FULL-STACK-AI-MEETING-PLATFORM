@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { AuthContext } from "./AuthContextValue";
+import { clearMeetingHistory } from "../utils/meetingHistory";
 
 const getInitialUser = () => {
 
@@ -38,6 +39,7 @@ const AuthProvider = ({ children }) => {
   const logout = () => {
 
     localStorage.removeItem("user");
+    clearMeetingHistory();
 
     setUser(null);
   };

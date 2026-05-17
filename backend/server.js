@@ -323,6 +323,10 @@ io.on("connection", (socket) => {
 
     socket.data.rooms.add(roomId);
 
+    const existingUsers = meetingUsers[roomId].filter(
+      (u) => u.socketId !== socket.id
+    );
+
     // CHECK USER
 
     const alreadyExists =
@@ -360,11 +364,14 @@ io.on("connection", (socket) => {
 
     }
 
-    // SEND USERS
+    // SEND EXISTING USERS TO THE NEW PARTICIPANT
+    // The new participant is the only caller/initiator. If everyone in the
+    // room receives this list, both sides create offers at the same time and
+    // the WebRTC connection can fail before media tracks are exchanged.
 
-    io.to(roomId).emit(
+    io.to(socket.id).emit(
       "meeting-users",
-      meetingUsers[roomId]
+      existingUsers
     );
 
     // SEND CHAT HISTORY
@@ -667,6 +674,20 @@ io.on("connection", (socket) => {
 
     ensureRoom(roomId);
 
+    if (
+      roomSettings[roomId].hostSocketId !==
+      socket.id
+    ) {
+      socket.emit(
+        "attendance-error",
+        {
+          message:
+            "Only the host can change attendance time",
+        }
+      );
+      return;
+    }
+
     const parsedMinutes = Number(minutes);
 
     if (
@@ -807,10 +828,7 @@ io.on("connection", (socket) => {
 
       // UPDATE USERS
 
-      io.to(roomId).emit(
-        "meeting-users",
-        meetingUsers[roomId]
-      );
+      io.to(roomId).emit("user-left", socket.id);
 
       emitMeetingSettings(roomId);
       emitAttendance(roomId);

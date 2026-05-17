@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   FaBars,
   FaCheckCircle,
@@ -7,6 +12,7 @@ import {
 } from "react-icons/fa";
 import { MdHistory } from "react-icons/md";
 
+import { AuthContext } from "../context/AuthContextValue";
 import { readMeetingHistory } from "../utils/meetingHistory";
 
 const getHistoryRooms = () => {
@@ -132,14 +138,20 @@ const SidebarContent = ({
 
 const Sidebar = () => {
 
-  const [rooms, setRooms] = useState(() => getHistoryRooms());
+  const { user } = useContext(AuthContext);
+
+  const [rooms, setRooms] = useState(
+    () => user ? getHistoryRooms() : []
+  );
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
 
     const refreshHistory = () => {
-      setRooms(getHistoryRooms());
+      setRooms(user ? getHistoryRooms() : []);
     };
+
+    refreshHistory();
 
     window.addEventListener(
       "meeting-history-updated",
@@ -161,7 +173,7 @@ const Sidebar = () => {
       );
     };
 
-  }, []);
+  }, [user]);
 
   const latestRoom = rooms[0];
   const attendance = latestRoom?.attendance || [];
