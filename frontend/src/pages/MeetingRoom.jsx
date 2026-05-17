@@ -16,6 +16,7 @@ import { useContext } from "react";
 
 import {
   FaClock,
+  FaDesktop,
   FaMicrophone,
   FaMicrophoneSlash,
   FaPaperPlane,
@@ -53,6 +54,20 @@ const getStoredUser = () => {
   } catch {
     return null;
   }
+
+};
+
+const setMediaTrackEnabled = (track, enabled) => {
+
+  if (track) {
+    track.enabled = enabled;
+  }
+
+};
+
+const playVideo = (video) => {
+
+  video?.play?.().catch(() => {});
 
 };
 
@@ -95,12 +110,17 @@ const MeetingRoom = () => {
     attendanceThresholdMinutes: 10,
   });
   const [aiRecording, setAiRecording] = useState(false);
+  const [screenSharing, setScreenSharing] = useState(false);
   const [aiStatus, setAiStatus] = useState("");
   const [summaryLoading, setSummaryLoading] =
     useState(false);
 
   const userVideo = useRef(null);
   const peersRef = useRef([]);
+  const localStreamRef = useRef(null);
+  const cameraVideoTrackRef = useRef(null);
+  const screenVideoTrackRef = useRef(null);
+  const screenStreamRef = useRef(null);
   const transcriptsRef = useRef([]);
   const summariesRef = useRef([]);
   const recorderRef = useRef(null);
@@ -119,6 +139,42 @@ const MeetingRoom = () => {
     );
 
   }, []);
+
+  const attachLocalPreview = useCallback((nextStream) => {
+
+    if (userVideo.current) {
+      userVideo.current.srcObject = nextStream;
+      playVideo(userVideo.current);
+    }
+
+  }, []);
+
+  const replaceOutgoingVideoTrack = useCallback(
+    (oldTrack, newTrack, activeStream) => {
+
+      if (!oldTrack || !newTrack || !activeStream) {
+        return;
+      }
+
+      peersRef.current.forEach((item) => {
+
+        try {
+          item.peer.replaceTrack(
+            oldTrack,
+            newTrack,
+            activeStream
+          );
+        } catch {
+          setAiStatus(
+            "Could not update video for one participant."
+          );
+        }
+
+      });
+
+    },
+    []
+  );
 
   useEffect(() => {
 
@@ -204,6 +260,138 @@ const MeetingRoom = () => {
     setAiRecording(false);
 
   }, []);
+
+  const stopScreenSharing = useCallback(() => {
+
+    const activeStream = localStreamRef.current;
+    const screenTrack = screenVideoTrackRef.current;
+    const cameraTrack = cameraVideoTrackRef.current;
+
+    if (!activeStream || !screenTrack || !cameraTrack) {
+      screenStreamRef.current?.getTracks().forEach((track) => {
+        track.stop();
+      });
+      screenStreamRef.current = null;
+      screenVideoTrackRef.current = null;
+      setScreenSharing(false);
+      return;
+    }
+
+    replaceOutgoingVideoTrack(
+      screenTrack,
+      cameraTrack,
+      activeStream
+    );
+
+    activeStream.removeTrack(screenTrack);
+
+    if (!activeStream.getVideoTracks().includes(cameraTrack)) {
+      activeStream.addTrack(cameraTrack);
+    }
+
+    setMediaTrackEnabled(cameraTrack, cameraOn);
+    screenTrack.onended = null;
+    screenTrack.stop();
+    screenStreamRef.current?.getTracks().forEach((track) => {
+      if (track !== screenTrack) {
+        track.stop();
+      }
+    });
+
+    screenStreamRef.current = null;
+    screenVideoTrackRef.current = null;
+    attachLocalPreview(activeStream);
+    setStream(activeStream);
+    setScreenSharing(false);
+    setAiStatus("Screen sharing stopped.");
+
+  }, [
+    attachLocalPreview,
+    cameraOn,
+    replaceOutgoingVideoTrack,
+  ]);
+
+  const startScreenSharing = useCallback(async () => {
+
+    if (!stream || !localStreamRef.current) {
+      setAiStatus("Camera and mic are not ready yet.");
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      setAiStatus(
+        "Your browser does not support screen sharing."
+      );
+      return;
+    }
+
+    try {
+
+      const displayStream =
+        await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: false,
+        });
+
+      const screenTrack = displayStream.getVideoTracks()[0];
+      const activeStream = localStreamRef.current;
+      const currentVideoTrack =
+        screenVideoTrackRef.current ||
+        activeStream.getVideoTracks()[0];
+      const cameraTrack =
+        cameraVideoTrackRef.current ||
+        currentVideoTrack;
+
+      if (!screenTrack || !currentVideoTrack) {
+        displayStream.getTracks().forEach((track) => {
+          track.stop();
+        });
+        setAiStatus("No screen video track was selected.");
+        return;
+      }
+
+      cameraVideoTrackRef.current = cameraTrack;
+      replaceOutgoingVideoTrack(
+        currentVideoTrack,
+        screenTrack,
+        activeStream
+      );
+
+      activeStream.removeTrack(currentVideoTrack);
+      activeStream.addTrack(screenTrack);
+
+      screenStreamRef.current = displayStream;
+      screenVideoTrackRef.current = screenTrack;
+      screenTrack.onended = () => {
+        stopScreenSharing();
+      };
+
+      attachLocalPreview(activeStream);
+      setStream(activeStream);
+      setScreenSharing(true);
+      setAiStatus("Screen sharing is active.");
+
+    } catch {
+      setAiStatus("Screen sharing was cancelled.");
+    }
+
+  }, [
+    attachLocalPreview,
+    replaceOutgoingVideoTrack,
+    stopScreenSharing,
+    stream,
+  ]);
+
+  const toggleScreenSharing = () => {
+
+    if (screenSharing) {
+      stopScreenSharing();
+      return;
+    }
+
+    startScreenSharing();
+
+  };
 
   const startAiRecording = useCallback(() => {
 
@@ -348,6 +536,15 @@ const MeetingRoom = () => {
       });
     }
 
+    screenStreamRef.current?.getTracks().forEach((track) => {
+      track.stop();
+    });
+    cameraVideoTrackRef.current?.stop();
+    localStreamRef.current = null;
+    screenStreamRef.current = null;
+    screenVideoTrackRef.current = null;
+    cameraVideoTrackRef.current = null;
+
   }, [refreshPeers, stopAiRecording, stream]);
 
   const stopMeeting = () => {
@@ -399,11 +596,12 @@ const MeetingRoom = () => {
         if (!mounted) return;
 
         localStream = currentStream;
+        localStreamRef.current = currentStream;
+        cameraVideoTrackRef.current =
+          currentStream.getVideoTracks()[0] || null;
         setStream(currentStream);
 
-        if (userVideo.current) {
-          userVideo.current.srcObject = currentStream;
-        }
+        attachLocalPreview(currentStream);
 
         socket.emit("join-meeting", {
           roomId,
@@ -533,10 +731,20 @@ const MeetingRoom = () => {
         });
       }
 
+      screenStreamRef.current?.getTracks().forEach((track) => {
+        track.stop();
+      });
+      cameraVideoTrackRef.current?.stop();
+      localStreamRef.current = null;
+      screenStreamRef.current = null;
+      screenVideoTrackRef.current = null;
+      cameraVideoTrackRef.current = null;
+
     };
 
   }, [
     addPeer,
+    attachLocalPreview,
     createPeer,
     currentUser,
     refreshPeers,
@@ -700,7 +908,7 @@ const MeetingRoom = () => {
     if (!stream) return;
 
     stream.getAudioTracks().forEach((track) => {
-      track.enabled = !micOn;
+      setMediaTrackEnabled(track, !micOn);
     });
 
     setMicOn((prev) => !prev);
@@ -711,11 +919,14 @@ const MeetingRoom = () => {
 
     if (!stream) return;
 
-    stream.getVideoTracks().forEach((track) => {
-      track.enabled = !cameraOn;
-    });
+    const nextCameraState = !cameraOn;
+    const cameraTrack =
+      cameraVideoTrackRef.current ||
+      stream.getVideoTracks()[0];
 
-    setCameraOn((prev) => !prev);
+    setMediaTrackEnabled(cameraTrack, nextCameraState);
+
+    setCameraOn(nextCameraState);
 
   };
 
@@ -822,7 +1033,7 @@ const MeetingRoom = () => {
               />
 
               <div className="absolute bottom-3 left-3 bg-black/70 px-4 py-2 rounded-xl">
-                You
+                {screenSharing ? "You are sharing" : "You"}
               </div>
             </div>
 
@@ -851,8 +1062,27 @@ const MeetingRoom = () => {
               className={`p-5 rounded-full ${
                 cameraOn ? "bg-indigo-600" : "bg-red-600"
               }`}
+              title={
+                cameraOn ? "Turn camera off" : "Turn camera on"
+              }
             >
               {cameraOn ? <FaVideo /> : <FaVideoSlash />}
+            </button>
+
+            <button
+              onClick={toggleScreenSharing}
+              className={`p-5 rounded-full ${
+                screenSharing
+                  ? "bg-amber-500"
+                  : "bg-sky-600"
+              }`}
+              title={
+                screenSharing
+                  ? "Stop presenting"
+                  : "Share screen"
+              }
+            >
+              <FaDesktop />
             </button>
           </div>
 
@@ -1061,6 +1291,7 @@ const PeerVideo = ({
 
       if (ref.current) {
         ref.current.srcObject = remoteStream;
+        playVideo(ref.current);
       }
 
     };
