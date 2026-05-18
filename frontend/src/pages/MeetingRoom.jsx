@@ -16,11 +16,13 @@ import { useContext } from "react";
 
 import {
   FaClock,
+  FaCopy,
   FaDesktop,
   FaMicrophone,
   FaMicrophoneSlash,
   FaPaperPlane,
   FaRobot,
+  FaShareAlt,
   FaStop,
   FaUsers,
   FaVideo,
@@ -58,11 +60,38 @@ const PEER_CONFIG = {
   ],
 };
 
+const TURN_PLACEHOLDER_PATTERN =
+  /YOUR_|example|localhost/i;
+
+const getTurnUrls = () =>
+  (import.meta.env.VITE_TURN_URLS || "")
+    .split(",")
+    .map((url) => url.trim())
+    .filter(Boolean);
+
+const hasUsableTurnConfig = () => {
+
+  const urls = getTurnUrls();
+  const username = import.meta.env.VITE_TURN_USERNAME || "";
+  const credential =
+    import.meta.env.VITE_TURN_CREDENTIAL || "";
+
+  return (
+    urls.some((url) => /^turns?:/i.test(url)) &&
+    Boolean(username) &&
+    Boolean(credential) &&
+    ![...urls, username, credential].some((value) =>
+      TURN_PLACEHOLDER_PATTERN.test(value)
+    )
+  );
+
+};
+
 const getConfiguredIceServers = () => {
 
-  const turnUrls = import.meta.env.VITE_TURN_URLS;
+  const turnUrls = getTurnUrls();
 
-  if (!turnUrls) {
+  if (!hasUsableTurnConfig()) {
     return PEER_CONFIG;
   }
 
@@ -70,10 +99,7 @@ const getConfiguredIceServers = () => {
     iceServers: [
       ...PEER_CONFIG.iceServers,
       {
-        urls: turnUrls
-          .split(",")
-          .map((url) => url.trim())
-          .filter(Boolean),
+        urls: turnUrls,
         username: import.meta.env.VITE_TURN_USERNAME || "",
         credential: import.meta.env.VITE_TURN_CREDENTIAL || "",
       },
@@ -147,6 +173,7 @@ const MeetingRoom = () => {
   const [aiRecording, setAiRecording] = useState(false);
   const [screenSharing, setScreenSharing] = useState(false);
   const [aiStatus, setAiStatus] = useState("");
+  const [shareStatus, setShareStatus] = useState("");
   const [summaryLoading, setSummaryLoading] =
     useState(false);
 
@@ -1128,6 +1155,44 @@ const MeetingRoom = () => {
 
   };
 
+  const meetingLink =
+    typeof window !== "undefined"
+      ? window.location.href
+      : "";
+
+  const copyMeetingLink = async () => {
+
+    try {
+      await navigator.clipboard.writeText(meetingLink || roomId);
+      setShareStatus("Meeting link copied.");
+    } catch {
+      setShareStatus("Copy failed. Select the room ID manually.");
+    }
+
+  };
+
+  const shareMeetingLink = async () => {
+
+    const shareData = {
+      title: "AI Meeting Room",
+      text: `Join my meeting: ${roomId}`,
+      url: meetingLink,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        setShareStatus("Meeting link shared.");
+      } catch {
+        setShareStatus("");
+      }
+      return;
+    }
+
+    copyMeetingLink();
+
+  };
+
   const latestSummary =
     summaries[summaries.length - 1]?.summary;
 
@@ -1145,6 +1210,8 @@ const MeetingRoom = () => {
       participant.socketId !== socket.id &&
       !connectedPeerIds.has(participant.socketId)
   );
+
+  const turnConfigured = hasUsableTurnConfig();
 
   if (!user) {
     return (
@@ -1175,6 +1242,32 @@ const MeetingRoom = () => {
           <p className="text-gray-400 break-all">
             Room: {roomId}
           </p>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              onClick={copyMeetingLink}
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-3 py-2 text-sm text-gray-100 hover:bg-slate-700"
+              title="Copy meeting link"
+            >
+              <FaCopy />
+              Copy ID
+            </button>
+
+            <button
+              onClick={shareMeetingLink}
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-3 py-2 text-sm text-gray-100 hover:bg-slate-700"
+              title="Share meeting link"
+            >
+              <FaShareAlt />
+              Share
+            </button>
+
+            {shareStatus && (
+              <span className="text-sm text-green-300">
+                {shareStatus}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -1243,6 +1336,7 @@ const MeetingRoom = () => {
               <PendingParticipant
                 key={participant.socketId || participant.userId}
                 name={participant.name}
+                turnConfigured={turnConfigured}
               />
             ))}
 
@@ -1486,6 +1580,9 @@ const PeerVideo = ({
 
   const ref = useRef(null);
   const [hasRemoteStream, setHasRemoteStream] = useState(false);
+  const [peerStatus, setPeerStatus] = useState(
+    "Connecting video..."
+  );
 
   useEffect(() => {
 
@@ -1504,6 +1601,43 @@ const PeerVideo = ({
 
     peer.on("stream", handleStream);
 
+    const handleConnect = () => {
+      setPeerStatus("Connected. Waiting for media...");
+    };
+
+    const handleError = () => {
+      setPeerStatus("Connection failed.");
+    };
+
+    const handleClose = () => {
+      setPeerStatus("Connection closed.");
+    };
+
+    peer.on("connect", handleConnect);
+    peer.on("error", handleError);
+    peer.on("close", handleClose);
+
+    const peerConnection = peer._pc;
+    const handleIceChange = () => {
+
+      const iceState =
+        peerConnection?.iceConnectionState ||
+        peerConnection?.connectionState;
+
+      if (
+        iceState === "failed" ||
+        iceState === "disconnected"
+      ) {
+        setPeerStatus("Network blocked media connection.");
+      }
+
+    };
+
+    peerConnection?.addEventListener?.(
+      "iceconnectionstatechange",
+      handleIceChange
+    );
+
     const existingStream =
       peer.streams?.[0] ||
       peer._remoteStreams?.[0];
@@ -1514,6 +1648,13 @@ const PeerVideo = ({
 
     return () => {
       peer.off("stream", handleStream);
+      peer.off("connect", handleConnect);
+      peer.off("error", handleError);
+      peer.off("close", handleClose);
+      peerConnection?.removeEventListener?.(
+        "iceconnectionstatechange",
+        handleIceChange
+      );
     };
 
   }, [peer]);
@@ -1534,7 +1675,7 @@ const PeerVideo = ({
 
       {!hasRemoteStream && (
         <div className="absolute inset-0 flex items-center justify-center bg-slate-950/80 text-sm text-gray-300">
-          Connecting video...
+          {peerStatus}
         </div>
       )}
     </div>
@@ -1542,7 +1683,7 @@ const PeerVideo = ({
 
 };
 
-const PendingParticipant = ({ name }) => (
+const PendingParticipant = ({ name, turnConfigured }) => (
   <div className="bg-slate-900 rounded-3xl overflow-hidden border border-slate-800 relative min-h-[300px] flex items-center justify-center">
     <div className="text-center px-5">
       <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-slate-800 text-2xl font-bold text-indigo-200">
@@ -1552,7 +1693,9 @@ const PendingParticipant = ({ name }) => (
       <p className="font-semibold">{name}</p>
 
       <p className="mt-1 text-sm text-gray-400">
-        Connecting video and audio...
+        {turnConfigured
+          ? "Connecting video and audio..."
+          : "TURN relay is not configured."}
       </p>
     </div>
   </div>
