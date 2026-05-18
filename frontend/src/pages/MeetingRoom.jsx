@@ -603,11 +603,6 @@ const MeetingRoom = () => {
 
         attachLocalPreview(currentStream);
 
-        socket.emit("join-meeting", {
-          roomId,
-          user: currentUser,
-        });
-
         socket.on("meeting-users", (users) => {
 
           users.forEach((user) => {
@@ -703,6 +698,11 @@ const MeetingRoom = () => {
 
           }
         );
+
+        socket.emit("join-meeting", {
+          roomId,
+          user: currentUser,
+        });
 
       })
       .catch(() => {
@@ -952,6 +952,11 @@ const MeetingRoom = () => {
   const latestSummary =
     summaries[summaries.length - 1]?.summary;
 
+  const participantCount = Math.max(
+    attendance.length,
+    peers.length + 1
+  );
+
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6">
@@ -985,7 +990,7 @@ const MeetingRoom = () => {
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="text-green-400">
-            {peers.length + 1} Participants
+            {participantCount} Participants
           </div>
 
           <button
@@ -1284,10 +1289,13 @@ const PeerVideo = ({
 }) => {
 
   const ref = useRef(null);
+  const [hasRemoteStream, setHasRemoteStream] = useState(false);
 
   useEffect(() => {
 
     const handleStream = (remoteStream) => {
+
+      setHasRemoteStream(true);
 
       if (ref.current) {
         ref.current.srcObject = remoteStream;
@@ -1297,6 +1305,14 @@ const PeerVideo = ({
     };
 
     peer.on("stream", handleStream);
+
+    const existingStream =
+      peer.streams?.[0] ||
+      peer._remoteStreams?.[0];
+
+    if (existingStream) {
+      handleStream(existingStream);
+    }
 
     return () => {
       peer.off("stream", handleStream);
@@ -1316,6 +1332,12 @@ const PeerVideo = ({
       <div className="absolute bottom-3 left-3 bg-black/70 px-4 py-2 rounded-xl">
         {name}
       </div>
+
+      {!hasRemoteStream && (
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-950/80 text-sm text-gray-300">
+          Connecting video...
+        </div>
+      )}
     </div>
   );
 
