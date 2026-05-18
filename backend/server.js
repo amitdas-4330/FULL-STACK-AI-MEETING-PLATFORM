@@ -323,10 +323,6 @@ io.on("connection", (socket) => {
 
     socket.data.rooms.add(roomId);
 
-    const existingUsers = meetingUsers[roomId].filter(
-      (u) => u.socketId !== socket.id
-    );
-
     // CHECK USER
 
     const alreadyExists =
@@ -364,14 +360,13 @@ io.on("connection", (socket) => {
 
     }
 
-    // SEND EXISTING USERS TO THE NEW PARTICIPANT
-    // The new participant is the only caller/initiator. If everyone in the
-    // room receives this list, both sides create offers at the same time and
-    // the WebRTC connection can fail before media tracks are exchanged.
+    // Sync the full room user list with every participant.
+    // The frontend uses socket ids to decide which side creates each
+    // WebRTC offer, so every pair gets one connection without offer glare.
 
-    io.to(socket.id).emit(
+    io.to(roomId).emit(
       "meeting-users",
-      existingUsers
+      meetingUsers[roomId]
     );
 
     // SEND CHAT HISTORY
@@ -396,6 +391,23 @@ io.on("connection", (socket) => {
 
     console.log(
       `${user.name} joined room ${roomId}`
+    );
+
+  });
+
+  socket.on("sync-meeting-users", (data) => {
+
+    const { roomId } = data;
+
+    ensureRoom(roomId);
+
+    if (!socket.data.rooms?.has(roomId)) {
+      return;
+    }
+
+    io.to(roomId).emit(
+      "meeting-users",
+      meetingUsers[roomId]
     );
 
   });

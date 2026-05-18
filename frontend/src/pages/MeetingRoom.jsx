@@ -47,6 +47,17 @@ const ATTENDANCE_OPTIONS = [
   60,
 ];
 
+const PEER_CONFIG = {
+  iceServers: [
+    {
+      urls: "stun:stun.l.google.com:19302",
+    },
+    {
+      urls: "stun:global.stun.twilio.com:3478",
+    },
+  ],
+};
+
 const getStoredUser = () => {
 
   try {
@@ -176,6 +187,48 @@ const MeetingRoom = () => {
     []
   );
 
+  const removePeer = useCallback(
+    (peerId) => {
+
+      peersRef.current =
+        peersRef.current.filter((item) => {
+
+          if (item.peerId === peerId) {
+            item.peer.destroy();
+            return false;
+          }
+
+          return true;
+
+        });
+
+      refreshPeers();
+
+    },
+    [refreshPeers]
+  );
+
+  const addPeerEvents = useCallback(
+    (peer, peerId) => {
+
+      peer.on("error", () => {
+        removePeer(peerId);
+      });
+
+      peer.on("close", () => {
+        removePeer(peerId);
+      });
+
+    },
+    [removePeer]
+  );
+
+  const shouldInitiatePeer = useCallback(
+    (peerId) =>
+      Boolean(socket.id && peerId && socket.id < peerId),
+    []
+  );
+
   useEffect(() => {
 
     transcriptsRef.current = transcripts;
@@ -195,7 +248,10 @@ const MeetingRoom = () => {
         initiator: true,
         trickle: false,
         stream: currentStream,
+        config: PEER_CONFIG,
       });
+
+      addPeerEvents(peer, userToSignal);
 
       peer.on("signal", (signal) => {
 
@@ -211,7 +267,7 @@ const MeetingRoom = () => {
       return peer;
 
     },
-    [currentUser.name]
+    [addPeerEvents, currentUser.name]
   );
 
   const addPeer = useCallback(
@@ -221,7 +277,10 @@ const MeetingRoom = () => {
         initiator: false,
         trickle: false,
         stream: currentStream,
+        config: PEER_CONFIG,
       });
+
+      addPeerEvents(peer, callerId);
 
       peer.on("signal", (signal) => {
 
@@ -237,7 +296,7 @@ const MeetingRoom = () => {
       return peer;
 
     },
-    []
+    [addPeerEvents]
   );
 
   const stopAiRecording = useCallback(() => {
@@ -609,6 +668,8 @@ const MeetingRoom = () => {
 
             if (user.socketId === socket.id) return;
 
+            if (!shouldInitiatePeer(user.socketId)) return;
+
             const existingPeer =
               peersRef.current.find(
                 (item) =>
@@ -640,19 +701,7 @@ const MeetingRoom = () => {
 
         socket.on("user-left", (socketId) => {
 
-          peersRef.current =
-            peersRef.current.filter((item) => {
-
-              if (item.peerId === socketId) {
-                item.peer.destroy();
-                return false;
-              }
-
-              return true;
-
-            });
-
-          refreshPeers();
+          removePeer(socketId);
 
         });
 
@@ -664,7 +713,13 @@ const MeetingRoom = () => {
                 item.peerId === payload.callerId
             );
 
-          if (existingPeer) return;
+          if (existingPeer) {
+            if (shouldInitiatePeer(payload.callerId)) {
+              return;
+            }
+
+            removePeer(payload.callerId);
+          }
 
           const peer = addPeer(
             payload.signal,
@@ -747,8 +802,10 @@ const MeetingRoom = () => {
     attachLocalPreview,
     createPeer,
     currentUser,
+    removePeer,
     refreshPeers,
     roomId,
+    shouldInitiatePeer,
     stopAiRecording,
     user,
     navigate,
@@ -798,6 +855,22 @@ const MeetingRoom = () => {
     socket.on("attendance-update", (data) => {
       setAttendance(data);
       saveMeetingAttendance(roomId, data);
+
+      const hasMissingPeer = data.some(
+        (participant) =>
+          participant.socketId &&
+          participant.socketId !== socket.id &&
+          !peersRef.current.some(
+            (peerItem) =>
+              peerItem.peerId === participant.socketId
+          )
+      );
+
+      if (hasMissingPeer && localStreamRef.current) {
+        socket.emit("sync-meeting-users", {
+          roomId,
+        });
+      }
     });
 
     socket.on("meeting-settings", (data) => {
@@ -957,6 +1030,16 @@ const MeetingRoom = () => {
     peers.length + 1
   );
 
+  const connectedPeerIds = new Set(
+    peers.map((peerData) => peerData.peerId)
+  );
+
+  const pendingParticipants = attendance.filter(
+    (participant) =>
+      participant.socketId !== socket.id &&
+      !connectedPeerIds.has(participant.socketId)
+  );
+
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6">
@@ -1047,6 +1130,13 @@ const MeetingRoom = () => {
                 key={peerData.peerId}
                 peer={peerData.peer}
                 name={peerData.name}
+              />
+            ))}
+
+            {pendingParticipants.map((participant) => (
+              <PendingParticipant
+                key={participant.socketId || participant.userId}
+                name={participant.name}
               />
             ))}
 
@@ -1299,6 +1389,8 @@ const PeerVideo = ({
 
       if (ref.current) {
         ref.current.srcObject = remoteStream;
+        ref.current.muted = false;
+        ref.current.volume = 1;
         playVideo(ref.current);
       }
 
@@ -1326,6 +1418,7 @@ const PeerVideo = ({
         playsInline
         autoPlay
         ref={ref}
+        muted={false}
         className="w-full h-[300px] object-cover bg-black"
       />
 
@@ -1342,5 +1435,21 @@ const PeerVideo = ({
   );
 
 };
+
+const PendingParticipant = ({ name }) => (
+  <div className="bg-slate-900 rounded-3xl overflow-hidden border border-slate-800 relative min-h-[300px] flex items-center justify-center">
+    <div className="text-center px-5">
+      <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-slate-800 text-2xl font-bold text-indigo-200">
+        {name?.charAt(0)?.toUpperCase() || "?"}
+      </div>
+
+      <p className="font-semibold">{name}</p>
+
+      <p className="mt-1 text-sm text-gray-400">
+        Connecting video and audio...
+      </p>
+    </div>
+  </div>
+);
 
 export default MeetingRoom;
