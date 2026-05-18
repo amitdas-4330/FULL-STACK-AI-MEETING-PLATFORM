@@ -276,12 +276,6 @@ const MeetingRoom = () => {
     [removePeer]
   );
 
-  const shouldInitiatePeer = useCallback(
-    (peerId) =>
-      Boolean(socket.id && peerId && socket.id < peerId),
-    []
-  );
-
   useEffect(() => {
 
     transcriptsRef.current = transcripts;
@@ -353,17 +347,13 @@ const MeetingRoom = () => {
   );
 
   const createPeerForUser = useCallback(
-    (targetUser, currentStream, force = false) => {
+    (targetUser, currentStream) => {
 
       if (!targetUser?.socketId || !currentStream) {
         return;
       }
 
       if (targetUser.socketId === socket.id) {
-        return;
-      }
-
-      if (!force && !shouldInitiatePeer(targetUser.socketId)) {
         return;
       }
 
@@ -397,7 +387,6 @@ const MeetingRoom = () => {
     [
       createPeer,
       refreshPeers,
-      shouldInitiatePeer,
     ]
   );
 
@@ -788,13 +777,9 @@ const MeetingRoom = () => {
             peersRef.current.find(
               (item) =>
                 item.peerId === payload.callerId
-            );
+          );
 
           if (existingPeer) {
-            if (shouldInitiatePeer(payload.callerId)) {
-              return;
-            }
-
             removePeer(payload.callerId);
           }
 
@@ -883,7 +868,6 @@ const MeetingRoom = () => {
     removePeer,
     refreshPeers,
     roomId,
-    shouldInitiatePeer,
     stopAiRecording,
     user,
     navigate,
@@ -990,8 +974,7 @@ const MeetingRoom = () => {
 
             createPeerForUser(
               userToConnect,
-              localStreamRef.current,
-              true
+              localStreamRef.current
             );
 
           }, 5000);

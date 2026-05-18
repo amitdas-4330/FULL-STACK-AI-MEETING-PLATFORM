@@ -49,7 +49,7 @@ const Navbar = () => {
             cursor-pointer
           "
         >
-          MeetAI
+          MeetSync AI
         </div>
 
         {/* DESKTOP MENU */}
