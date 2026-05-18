@@ -58,6 +58,30 @@ const PEER_CONFIG = {
   ],
 };
 
+const getConfiguredIceServers = () => {
+
+  const turnUrls = import.meta.env.VITE_TURN_URLS;
+
+  if (!turnUrls) {
+    return PEER_CONFIG;
+  }
+
+  return {
+    iceServers: [
+      ...PEER_CONFIG.iceServers,
+      {
+        urls: turnUrls
+          .split(",")
+          .map((url) => url.trim())
+          .filter(Boolean),
+        username: import.meta.env.VITE_TURN_USERNAME || "",
+        credential: import.meta.env.VITE_TURN_CREDENTIAL || "",
+      },
+    ],
+  };
+
+};
+
 const getStoredUser = () => {
 
   try {
@@ -128,6 +152,8 @@ const MeetingRoom = () => {
 
   const userVideo = useRef(null);
   const peersRef = useRef([]);
+  const knownUsersRef = useRef([]);
+  const reconnectTimersRef = useRef({});
   const localStreamRef = useRef(null);
   const cameraVideoTrackRef = useRef(null);
   const screenVideoTrackRef = useRef(null);
@@ -248,7 +274,7 @@ const MeetingRoom = () => {
         initiator: true,
         trickle: false,
         stream: currentStream,
-        config: PEER_CONFIG,
+        config: getConfiguredIceServers(),
       });
 
       addPeerEvents(peer, userToSignal);
@@ -277,7 +303,7 @@ const MeetingRoom = () => {
         initiator: false,
         trickle: false,
         stream: currentStream,
-        config: PEER_CONFIG,
+        config: getConfiguredIceServers(),
       });
 
       addPeerEvents(peer, callerId);
@@ -297,6 +323,55 @@ const MeetingRoom = () => {
 
     },
     [addPeerEvents]
+  );
+
+  const createPeerForUser = useCallback(
+    (targetUser, currentStream, force = false) => {
+
+      if (!targetUser?.socketId || !currentStream) {
+        return;
+      }
+
+      if (targetUser.socketId === socket.id) {
+        return;
+      }
+
+      if (!force && !shouldInitiatePeer(targetUser.socketId)) {
+        return;
+      }
+
+      const existingPeer =
+        peersRef.current.find(
+          (item) =>
+            item.peerId === targetUser.socketId
+        );
+
+      if (existingPeer) {
+        existingPeer.name = targetUser.name;
+        refreshPeers();
+        return;
+      }
+
+      const peer = createPeer(
+        targetUser.socketId,
+        socket.id,
+        currentStream
+      );
+
+      peersRef.current.push({
+        peerId: targetUser.socketId,
+        peer,
+        name: targetUser.name,
+      });
+
+      refreshPeers();
+
+    },
+    [
+      createPeer,
+      refreshPeers,
+      shouldInitiatePeer,
+    ]
   );
 
   const stopAiRecording = useCallback(() => {
@@ -664,38 +739,13 @@ const MeetingRoom = () => {
 
         socket.on("meeting-users", (users) => {
 
+          knownUsersRef.current = users;
+
           users.forEach((user) => {
 
-            if (user.socketId === socket.id) return;
-
-            if (!shouldInitiatePeer(user.socketId)) return;
-
-            const existingPeer =
-              peersRef.current.find(
-                (item) =>
-                  item.peerId === user.socketId
-              );
-
-            if (existingPeer) {
-              existingPeer.name = user.name;
-              return;
-            }
-
-            const peer = createPeer(
-              user.socketId,
-              socket.id,
-              currentStream
-            );
-
-            peersRef.current.push({
-              peerId: user.socketId,
-              peer,
-              name: user.name,
-            });
+            createPeerForUser(user, currentStream);
 
           });
-
-          refreshPeers();
 
         });
 
@@ -800,6 +850,7 @@ const MeetingRoom = () => {
   }, [
     addPeer,
     attachLocalPreview,
+    createPeerForUser,
     createPeer,
     currentUser,
     removePeer,
@@ -856,7 +907,7 @@ const MeetingRoom = () => {
       setAttendance(data);
       saveMeetingAttendance(roomId, data);
 
-      const hasMissingPeer = data.some(
+      const missingParticipants = data.filter(
         (participant) =>
           participant.socketId &&
           participant.socketId !== socket.id &&
@@ -866,11 +917,59 @@ const MeetingRoom = () => {
           )
       );
 
-      if (hasMissingPeer && localStreamRef.current) {
+      Object.keys(reconnectTimersRef.current).forEach(
+        (socketId) => {
+
+          const stillMissing =
+            missingParticipants.some(
+              (participant) =>
+                participant.socketId === socketId
+            );
+
+          if (!stillMissing) {
+            clearTimeout(
+              reconnectTimersRef.current[socketId]
+            );
+            delete reconnectTimersRef.current[socketId];
+          }
+
+        }
+      );
+
+      if (missingParticipants.length && localStreamRef.current) {
         socket.emit("sync-meeting-users", {
           roomId,
         });
       }
+
+      missingParticipants.forEach((participant) => {
+
+        if (reconnectTimersRef.current[participant.socketId]) {
+          return;
+        }
+
+        reconnectTimersRef.current[participant.socketId] =
+          setTimeout(() => {
+
+            delete reconnectTimersRef.current[
+              participant.socketId
+            ];
+
+            const userToConnect =
+              knownUsersRef.current.find(
+                (knownUser) =>
+                  knownUser.socketId === participant.socketId
+              ) || participant;
+
+            createPeerForUser(
+              userToConnect,
+              localStreamRef.current,
+              true
+            );
+
+          }, 5000);
+
+      });
     });
 
     socket.on("meeting-settings", (data) => {
@@ -958,9 +1057,16 @@ const MeetingRoom = () => {
       socket.off("attendance-error");
       socket.off("meeting-error");
       socket.off("meeting-ended");
+
+      Object.values(reconnectTimersRef.current).forEach(
+        (timer) => {
+          clearTimeout(timer);
+        }
+      );
+      reconnectTimersRef.current = {};
     };
 
-  }, [navigate, roomId, stopLocalMeeting]);
+  }, [createPeerForUser, navigate, roomId, stopLocalMeeting]);
 
   const sendMessage = () => {
 
