@@ -13,6 +13,7 @@
     "@tailwindcss/vite": "^4.3.0",
     "axios": "^1.16.1",
     "buffer": "^6.0.3",
+    "events": "^3.3.0",
     "framer-motion": "^12.38.0",
     "process": "^0.11.10",
     "react": "^19.2.6",
