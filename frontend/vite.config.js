@@ -7,7 +7,9 @@ export default defineConfig({
 
   resolve: {
     alias: {
+      buffer: "buffer",
       events: "events",
+      process: "process/browser",
     },
   },
 
@@ -17,7 +19,9 @@ export default defineConfig({
 
   optimizeDeps: {
     include: [
+      "buffer",
       "events",
+      "process",
       "simple-peer",
     ],
   },

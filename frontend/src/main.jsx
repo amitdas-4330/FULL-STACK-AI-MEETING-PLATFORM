@@ -1,5 +1,11 @@
 
-window.global = window;
+import { Buffer } from "buffer";
+import process from "process";
+
+window.Buffer = window.Buffer || Buffer;
+window.global = window.global || window;
+window.process = window.process || process;
+
 import React from "react";
 import ReactDOM from "react-dom/client";
 
