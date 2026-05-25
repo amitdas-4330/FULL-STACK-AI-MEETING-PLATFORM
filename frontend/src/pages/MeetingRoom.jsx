@@ -1479,6 +1479,32 @@ const MeetingRoom = () => {
                 key={peerData.peerId}
                 peer={peerData.peer}
                 name={peerData.name}
+                onReconnect={() => {
+                  const participant =
+                    attendance.find(
+                      (item) =>
+                        item.socketId === peerData.peerId
+                    ) ||
+                    knownUsersRef.current.find(
+                      (item) =>
+                        item.socketId === peerData.peerId
+                    ) || {
+                      socketId: peerData.peerId,
+                      name: peerData.name,
+                    };
+
+                  removePeer(peerData.peerId);
+                  socket.emit("sync-meeting-users", {
+                    roomId,
+                  });
+
+                  setTimeout(() => {
+                    createPeerForUser(
+                      participant,
+                      localStreamRef.current
+                    );
+                  }, 250);
+                }}
               />
             ))}
 
@@ -1743,6 +1769,7 @@ const MeetingRoom = () => {
 const PeerVideo = ({
   peer,
   name,
+  onReconnect,
 }) => {
 
   const ref = useRef(null);
@@ -1785,11 +1812,14 @@ const PeerVideo = ({
       setPeerStatus("Connected. Waiting for media...");
     };
 
-  const handleError = () => {
+    const handleError = () => {
+      setHasRemoteStream(false);
       setPeerStatus("Connection failed. Check console.");
     };
 
     const handleClose = () => {
+      setHasRemoteStream(false);
+
       const iceState =
         peerConnection?.iceConnectionState || "unknown";
       const connectionState =
@@ -1862,6 +1892,10 @@ const PeerVideo = ({
 
   }, [peer]);
 
+  const showStatus =
+    !hasRemoteStream ||
+    /closed|failed|blocked/i.test(peerStatus);
+
   return (
     <div className="bg-slate-900 rounded-3xl overflow-hidden border border-slate-800 relative">
       <video
@@ -1876,9 +1910,18 @@ const PeerVideo = ({
         {name}
       </div>
 
-      {!hasRemoteStream && (
-        <div className="absolute inset-0 flex items-center justify-center bg-slate-950/80 text-sm text-gray-300">
-          {peerStatus}
+      {showStatus && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-slate-950/80 px-5 text-center text-sm text-gray-300">
+          <p>{peerStatus}</p>
+
+          {/closed|failed|blocked/i.test(peerStatus) && (
+            <button
+              onClick={onReconnect}
+              className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+            >
+              Retry video
+            </button>
+          )}
         </div>
       )}
     </div>
