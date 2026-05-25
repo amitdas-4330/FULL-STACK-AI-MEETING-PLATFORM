@@ -23,6 +23,7 @@ import {
   FaPaperPlane,
   FaRobot,
   FaShareAlt,
+  FaSignOutAlt,
   FaStop,
   FaUsers,
   FaVideo,
@@ -97,12 +98,15 @@ const getConfiguredIceServers = () => {
 
   return {
     iceServers: [
-      ...PEER_CONFIG.iceServers,
       {
-        urls: turnUrls,
+        urls: "stun:stun.relay.metered.ca:80",
+      },
+      ...PEER_CONFIG.iceServers,
+      ...turnUrls.map((url) => ({
+        urls: url,
         username: import.meta.env.VITE_TURN_USERNAME || "",
         credential: import.meta.env.VITE_TURN_CREDENTIAL || "",
-      },
+      })),
     ],
   };
 
@@ -712,6 +716,20 @@ const MeetingRoom = () => {
 
   };
 
+  const leaveMeeting = () => {
+
+    socket.emit("leave-meeting", {
+      roomId,
+    });
+
+    stopLocalMeeting();
+
+    navigate("/", {
+      replace: true,
+    });
+
+  };
+
   const toggleAiRecording = () => {
 
     if (aiRecording) {
@@ -1283,6 +1301,15 @@ const MeetingRoom = () => {
             <FaStop />
             Stop Meeting
           </button>
+
+          <button
+            onClick={leaveMeeting}
+            title="Leave this meeting"
+            className="px-4 py-3 rounded-xl flex items-center gap-2 bg-amber-600 hover:bg-amber-500"
+          >
+            <FaSignOutAlt />
+            Leave
+          </button>
         </div>
 
       </div>
@@ -1584,6 +1611,19 @@ const PeerVideo = ({
 
     peer.on("stream", handleStream);
 
+    const handleTrack = (track, remoteStream) => {
+
+      if (remoteStream) {
+        handleStream(remoteStream);
+        return;
+      }
+
+      handleStream(new MediaStream([track]));
+
+    };
+
+    peer.on("track", handleTrack);
+
     const handleConnect = () => {
       setPeerStatus("Connected. Waiting for media...");
     };
@@ -1631,6 +1671,7 @@ const PeerVideo = ({
 
     return () => {
       peer.off("stream", handleStream);
+      peer.off("track", handleTrack);
       peer.off("connect", handleConnect);
       peer.off("error", handleError);
       peer.off("close", handleClose);

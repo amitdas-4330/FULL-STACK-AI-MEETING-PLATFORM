@@ -419,6 +419,44 @@ io.on("connection", (socket) => {
 
   });
 
+  socket.on("leave-meeting", (data) => {
+
+    const { roomId } = data;
+
+    if (!meetingUsers[roomId]) {
+      return;
+    }
+
+    meetingUsers[roomId] =
+      meetingUsers[roomId].filter(
+        (user) => user.socketId !== socket.id
+      );
+
+    roomAttendance[roomId] =
+      roomAttendance[roomId]?.filter(
+        (user) => user.socketId !== socket.id
+      ) || [];
+
+    if (
+      roomSettings[roomId] &&
+      roomSettings[roomId].hostSocketId ===
+        socket.id
+    ) {
+      roomSettings[roomId].hostSocketId =
+        meetingUsers[roomId][0]?.socketId ||
+        null;
+    }
+
+    socket.leave(roomId);
+    socket.data.rooms?.delete(roomId);
+
+    io.to(roomId).emit("user-left", socket.id);
+
+    emitMeetingSettings(roomId);
+    emitAttendance(roomId);
+
+  });
+
   // ======================================================
   // ================= CHAT SYSTEM ========================
   // ======================================================
