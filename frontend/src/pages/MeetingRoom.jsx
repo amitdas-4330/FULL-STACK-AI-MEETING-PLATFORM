@@ -185,6 +185,7 @@ const MeetingRoom = () => {
   const userVideo = useRef(null);
   const peersRef = useRef([]);
   const knownUsersRef = useRef([]);
+  const pendingSignalsRef = useRef({});
   const reconnectTimersRef = useRef({});
   const localStreamRef = useRef(null);
   const cameraVideoTrackRef = useRef(null);
@@ -221,6 +222,53 @@ const MeetingRoom = () => {
     }));
 
   }, []);
+
+  const queuePeerSignal = useCallback(
+    (peerId, signal) => {
+
+      if (!peerId || !signal) {
+        return;
+      }
+
+      pendingSignalsRef.current[peerId] = [
+        ...(pendingSignalsRef.current[peerId] || []),
+        signal,
+      ];
+
+      setPeerStatusForId(peerId, "Waiting for peer...");
+
+    },
+    [setPeerStatusForId]
+  );
+
+  const flushPeerSignals = useCallback(
+    (peerId, peer) => {
+
+      const signals =
+        pendingSignalsRef.current[peerId] || [];
+
+      if (!signals.length) {
+        return;
+      }
+
+      delete pendingSignalsRef.current[peerId];
+
+      signals.forEach((signal) => {
+
+        try {
+          peer.signal(signal);
+        } catch (error) {
+          setPeerStatusForId(
+            peerId,
+            error?.message || "Could not apply signal."
+          );
+        }
+
+      });
+
+    },
+    [setPeerStatusForId]
+  );
 
   const attachLocalPreview = useCallback((nextStream) => {
 
@@ -320,7 +368,7 @@ const MeetingRoom = () => {
 
       const peer = new Peer({
         initiator: true,
-        trickle: false,
+        trickle: true,
         stream: currentStream,
         config: getConfiguredIceServers(),
       });
@@ -353,7 +401,7 @@ const MeetingRoom = () => {
 
       const peer = new Peer({
         initiator: false,
-        trickle: false,
+        trickle: true,
         stream: currentStream,
         config: getConfiguredIceServers(),
       });
@@ -433,11 +481,13 @@ const MeetingRoom = () => {
         name: targetUser.name,
       });
 
+      flushPeerSignals(targetUser.socketId, peer);
       refreshPeers();
 
     },
     [
       createPeer,
+      flushPeerSignals,
       refreshPeers,
       setPeerStatusForId,
     ]
@@ -847,7 +897,27 @@ const MeetingRoom = () => {
           );
 
           if (existingPeer) {
-            removePeer(payload.callerId);
+            try {
+              existingPeer.peer.signal(payload.signal);
+              setPeerStatusForId(
+                payload.callerId,
+                "Remote signal received."
+              );
+            } catch (error) {
+              setPeerStatusForId(
+                payload.callerId,
+                error?.message || "Could not apply signal."
+              );
+            }
+            return;
+          }
+
+          if (payload.signal?.candidate) {
+            queuePeerSignal(
+              payload.callerId,
+              payload.signal
+            );
+            return;
           }
 
           const peer = addPeer(
@@ -862,6 +932,7 @@ const MeetingRoom = () => {
             name: payload.name,
           });
 
+          flushPeerSignals(payload.callerId, peer);
           refreshPeers();
 
         });
@@ -879,8 +950,17 @@ const MeetingRoom = () => {
               );
 
             if (item) {
-              item.peer.signal(payload.signal);
-              setPeerStatusForId(payload.id, "Connecting media...");
+              try {
+                item.peer.signal(payload.signal);
+                setPeerStatusForId(payload.id, "Connecting media...");
+              } catch (error) {
+                setPeerStatusForId(
+                  payload.id,
+                  error?.message || "Could not apply signal."
+                );
+              }
+            } else {
+              queuePeerSignal(payload.id, payload.signal);
             }
 
           }
@@ -935,6 +1015,8 @@ const MeetingRoom = () => {
     createPeerForUser,
     createPeer,
     currentUser,
+    flushPeerSignals,
+    queuePeerSignal,
     removePeer,
     refreshPeers,
     roomId,
