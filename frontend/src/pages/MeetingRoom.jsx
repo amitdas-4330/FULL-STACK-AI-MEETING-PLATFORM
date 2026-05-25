@@ -178,6 +178,7 @@ const MeetingRoom = () => {
   const [screenSharing, setScreenSharing] = useState(false);
   const [aiStatus, setAiStatus] = useState("");
   const [shareStatus, setShareStatus] = useState("");
+  const [peerStatusById, setPeerStatusById] = useState({});
   const [summaryLoading, setSummaryLoading] =
     useState(false);
 
@@ -205,6 +206,19 @@ const MeetingRoom = () => {
         peerId: item.peerId,
       }))
     );
+
+  }, []);
+
+  const setPeerStatusForId = useCallback((peerId, status) => {
+
+    if (!peerId) {
+      return;
+    }
+
+    setPeerStatusById((prev) => ({
+      ...prev,
+      [peerId]: status,
+    }));
 
   }, []);
 
@@ -260,28 +274,31 @@ const MeetingRoom = () => {
         });
 
       refreshPeers();
+      setPeerStatusForId(peerId, "");
 
     },
-    [refreshPeers]
+    [refreshPeers, setPeerStatusForId]
   );
 
   const addPeerEvents = useCallback(
     (peer, peerId) => {
 
       peer.on("error", () => {
+        setPeerStatusForId(peerId, "Peer error.");
         setAiStatus(
           `Video connection failed for ${peerId}. Try Retry video.`
         );
       });
 
       peer.on("close", () => {
+        setPeerStatusForId(peerId, "Peer closed.");
         setAiStatus(
           `Video connection closed for ${peerId}. Try Retry video.`
         );
       });
 
     },
-    []
+    [setPeerStatusForId]
   );
 
   useEffect(() => {
@@ -299,6 +316,8 @@ const MeetingRoom = () => {
   const createPeer = useCallback(
     (userToSignal, callerId, currentStream) => {
 
+      setPeerStatusForId(userToSignal, "Creating offer...");
+
       const peer = new Peer({
         initiator: true,
         trickle: false,
@@ -309,6 +328,8 @@ const MeetingRoom = () => {
       addPeerEvents(peer, userToSignal);
 
       peer.on("signal", (signal) => {
+
+        setPeerStatusForId(userToSignal, "Offer sent.");
 
         socket.emit("sending-signal", {
           userToSignal,
@@ -322,11 +343,13 @@ const MeetingRoom = () => {
       return peer;
 
     },
-    [addPeerEvents, currentUser.name]
+    [addPeerEvents, currentUser.name, setPeerStatusForId]
   );
 
   const addPeer = useCallback(
     (incomingSignal, callerId, currentStream) => {
+
+      setPeerStatusForId(callerId, "Answering offer...");
 
       const peer = new Peer({
         initiator: false,
@@ -339,6 +362,8 @@ const MeetingRoom = () => {
 
       peer.on("signal", (signal) => {
 
+        setPeerStatusForId(callerId, "Answer sent.");
+
         socket.emit("returning-signal", {
           signal,
           callerId,
@@ -347,17 +372,22 @@ const MeetingRoom = () => {
       });
 
       peer.signal(incomingSignal);
+      setPeerStatusForId(callerId, "Offer received.");
 
       return peer;
 
     },
-    [addPeerEvents]
+    [addPeerEvents, setPeerStatusForId]
   );
 
   const createPeerForUser = useCallback(
     (targetUser, currentStream) => {
 
       if (!targetUser?.socketId || !currentStream) {
+        setPeerStatusForId(
+          targetUser?.socketId,
+          "Camera/mic stream not ready."
+        );
         return;
       }
 
@@ -373,15 +403,29 @@ const MeetingRoom = () => {
 
       if (existingPeer) {
         existingPeer.name = targetUser.name;
+        setPeerStatusForId(
+          targetUser.socketId,
+          "Peer already created."
+        );
         refreshPeers();
         return;
       }
 
-      const peer = createPeer(
-        targetUser.socketId,
-        socket.id,
-        currentStream
-      );
+      let peer;
+
+      try {
+        peer = createPeer(
+          targetUser.socketId,
+          socket.id,
+          currentStream
+        );
+      } catch (error) {
+        setPeerStatusForId(
+          targetUser.socketId,
+          error?.message || "Could not create peer."
+        );
+        return;
+      }
 
       peersRef.current.push({
         peerId: targetUser.socketId,
@@ -395,6 +439,7 @@ const MeetingRoom = () => {
     [
       createPeer,
       refreshPeers,
+      setPeerStatusForId,
     ]
   );
 
@@ -825,6 +870,8 @@ const MeetingRoom = () => {
           "receiving-returned-signal",
           (payload) => {
 
+            setPeerStatusForId(payload.id, "Answer received.");
+
             const item =
               peersRef.current.find(
                 (peerItem) =>
@@ -833,6 +880,7 @@ const MeetingRoom = () => {
 
             if (item) {
               item.peer.signal(payload.signal);
+              setPeerStatusForId(payload.id, "Connecting media...");
             }
 
           }
@@ -890,6 +938,7 @@ const MeetingRoom = () => {
     removePeer,
     refreshPeers,
     roomId,
+    setPeerStatusForId,
     stopAiRecording,
     user,
     navigate,
@@ -1350,8 +1399,16 @@ const MeetingRoom = () => {
               <PendingParticipant
                 key={participant.socketId || participant.userId}
                 name={participant.name}
+                status={
+                  peerStatusById[participant.socketId] ||
+                  "Connecting video and audio..."
+                }
                 turnConfigured={turnConfigured}
                 onReconnect={() => {
+                  setPeerStatusForId(
+                    participant.socketId,
+                    "Retry requested..."
+                  );
                   socket.emit("sync-meeting-users", {
                     roomId,
                   });
@@ -1722,6 +1779,7 @@ const PeerVideo = ({
 
 const PendingParticipant = ({
   name,
+  status,
   turnConfigured,
   onReconnect,
 }) => (
@@ -1735,7 +1793,7 @@ const PendingParticipant = ({
 
       <p className="mt-1 text-sm text-gray-400">
         {turnConfigured
-          ? "Connecting video and audio..."
+          ? status
           : "TURN relay is not configured."}
       </p>
 
