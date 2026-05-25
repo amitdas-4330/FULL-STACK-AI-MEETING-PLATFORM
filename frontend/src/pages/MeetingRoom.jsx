@@ -269,15 +269,19 @@ const MeetingRoom = () => {
     (peer, peerId) => {
 
       peer.on("error", () => {
-        removePeer(peerId);
+        setAiStatus(
+          `Video connection failed for ${peerId}. Try Retry video.`
+        );
       });
 
       peer.on("close", () => {
-        removePeer(peerId);
+        setAiStatus(
+          `Video connection closed for ${peerId}. Try Retry video.`
+        );
       });
 
     },
-    [removePeer]
+    []
   );
 
   useEffect(() => {
@@ -995,7 +999,7 @@ const MeetingRoom = () => {
               localStreamRef.current
             );
 
-          }, 5000);
+          }, 1000);
 
       });
     });
@@ -1347,6 +1351,15 @@ const MeetingRoom = () => {
                 key={participant.socketId || participant.userId}
                 name={participant.name}
                 turnConfigured={turnConfigured}
+                onReconnect={() => {
+                  socket.emit("sync-meeting-users", {
+                    roomId,
+                  });
+                  createPeerForUser(
+                    participant,
+                    localStreamRef.current
+                  );
+                }}
               />
             ))}
 
@@ -1707,7 +1720,11 @@ const PeerVideo = ({
 
 };
 
-const PendingParticipant = ({ name, turnConfigured }) => (
+const PendingParticipant = ({
+  name,
+  turnConfigured,
+  onReconnect,
+}) => (
   <div className="bg-slate-900 rounded-3xl overflow-hidden border border-slate-800 relative min-h-[300px] flex items-center justify-center">
     <div className="text-center px-5">
       <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-slate-800 text-2xl font-bold text-indigo-200">
@@ -1721,6 +1738,13 @@ const PendingParticipant = ({ name, turnConfigured }) => (
           ? "Connecting video and audio..."
           : "TURN relay is not configured."}
       </p>
+
+      <button
+        onClick={onReconnect}
+        className="mt-4 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+      >
+        Retry video
+      </button>
     </div>
   </div>
 );
