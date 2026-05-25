@@ -1731,9 +1731,7 @@ const PeerVideo = ({
       handleIceChange
     );
 
-    const existingStream =
-      peer.streams?.[0] ||
-      peer._remoteStreams?.[0];
+    const existingStream = peer._remoteStreams?.[0];
 
     if (existingStream) {
       handleStream(existingStream);
