@@ -112,6 +112,11 @@ const getConfiguredIceServers = () => {
 
 };
 
+const getTurnConfigLabel = () =>
+  hasUsableTurnConfig()
+    ? `TURN ready (${getTurnUrls().length})`
+    : "TURN missing";
+
 const getStoredUser = () => {
 
   try {
@@ -1780,12 +1785,19 @@ const PeerVideo = ({
       setPeerStatus("Connected. Waiting for media...");
     };
 
-    const handleError = () => {
-      setPeerStatus("Connection failed.");
+  const handleError = () => {
+      setPeerStatus("Connection failed. Check console.");
     };
 
     const handleClose = () => {
-      setPeerStatus("Connection closed.");
+      const iceState =
+        peerConnection?.iceConnectionState || "unknown";
+      const connectionState =
+        peerConnection?.connectionState || "unknown";
+
+      setPeerStatus(
+        `Connection closed. ICE: ${iceState}. Peer: ${connectionState}. ${getTurnConfigLabel()}.`
+      );
     };
 
     peer.on("connect", handleConnect);
@@ -1796,15 +1808,23 @@ const PeerVideo = ({
     const handleIceChange = () => {
 
       const iceState =
-        peerConnection?.iceConnectionState ||
-        peerConnection?.connectionState;
+        peerConnection?.iceConnectionState || "unknown";
+      const connectionState =
+        peerConnection?.connectionState || "unknown";
 
       if (
         iceState === "failed" ||
         iceState === "disconnected"
       ) {
-        setPeerStatus("Network blocked media connection.");
+        setPeerStatus(
+          `Network blocked media. ICE: ${iceState}. Peer: ${connectionState}. ${getTurnConfigLabel()}.`
+        );
+        return;
       }
+
+      setPeerStatus(
+        `Connecting video... ICE: ${iceState}. Peer: ${connectionState}. ${getTurnConfigLabel()}.`
+      );
 
     };
 
@@ -1812,6 +1832,11 @@ const PeerVideo = ({
       "iceconnectionstatechange",
       handleIceChange
     );
+    peerConnection?.addEventListener?.(
+      "connectionstatechange",
+      handleIceChange
+    );
+    handleIceChange();
 
     const existingStream = peer._remoteStreams?.[0];
 
@@ -1827,6 +1852,10 @@ const PeerVideo = ({
       peer.off("close", handleClose);
       peerConnection?.removeEventListener?.(
         "iceconnectionstatechange",
+        handleIceChange
+      );
+      peerConnection?.removeEventListener?.(
+        "connectionstatechange",
         handleIceChange
       );
     };
