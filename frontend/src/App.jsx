@@ -3,6 +3,7 @@ import {
   Routes,
   Route,
 } from "react-router-dom";
+import { useState } from "react";
 
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
@@ -12,23 +13,29 @@ import Transcript from "./sections/Transcript";
 import Summary from "./sections/Summary";
 import Developer from "./sections/Developer";
 import About from "./sections/About";
+import Feedback from "./sections/Feedback";
 
 import MeetingRoom from "./pages/MeetingRoom";
 
 function Dashboard() {
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="bg-slate-950 min-h-screen text-white">
 
       {/* NAVBAR */}
 
-      <Navbar />
+      <Navbar onOpenSidebar={() => setSidebarOpen(true)} />
 
       <div className="flex">
 
         {/* SIDEBAR */}
 
-        <Sidebar />
+        <Sidebar
+          mobileOpen={sidebarOpen}
+          setMobileOpen={setSidebarOpen}
+        />
 
         {/* MAIN CONTENT */}
 
@@ -101,6 +108,17 @@ function Dashboard() {
             "
           >
             <About />
+          </section>
+
+          {/* FEEDBACK */}
+
+          <section
+            id="feedback"
+            className="
+              scroll-mt-24
+            "
+          >
+            <Feedback />
           </section>
 
         </main>

@@ -1,12 +1,12 @@
 import { useContext, useState } from "react";
-import { HiMenuAlt3, HiX } from "react-icons/hi";
+import { HiMenuAlt2, HiMenuAlt3, HiX } from "react-icons/hi";
 
 import LoginModal from "./LoginModal";
 import SignupModal from "./SignupModal";
 
 import { AuthContext } from "../context/AuthContextValue";
 
-const Navbar = () => {
+const Navbar = ({ onOpenSidebar }) => {
 
   const [showLogin, setShowLogin] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
@@ -18,6 +18,7 @@ const Navbar = () => {
     <>
       <nav
         className="
+          navbar-shell
           fixed
           top-0
           left-0
@@ -38,18 +39,40 @@ const Navbar = () => {
         "
       >
 
-        {/* LOGO */}
+        <div className="flex items-center gap-3">
 
-        <div
-          className="
-            text-2xl
-            sm:text-3xl
-            font-bold
-            text-indigo-400
-            cursor-pointer
-          "
-        >
-          MeetAI
+          {/* SIDEBAR TOGGLE */}
+
+          <button
+            type="button"
+            onClick={onOpenSidebar}
+            className="
+              navbar-icon-btn
+              lg:hidden
+              text-white
+              text-3xl
+              p-1
+              -ml-1
+            "
+            aria-label="Open sidebar"
+          >
+            <HiMenuAlt2 />
+          </button>
+
+          {/* LOGO */}
+
+          <div
+            className="
+              text-2xl
+              sm:text-3xl
+              font-bold
+              text-indigo-400
+              cursor-pointer
+            "
+          >
+            MeetAI
+          </div>
+
         </div>
 
         {/* DESKTOP MENU */}
@@ -57,7 +80,7 @@ const Navbar = () => {
         <div
           className="
             hidden
-            md:flex
+            lg:flex
             items-center
             gap-6
             lg:gap-8
@@ -68,44 +91,51 @@ const Navbar = () => {
 
           <a
             href="#home"
-            className="hover:text-indigo-400 transition duration-300"
+            className="navbar-link"
           >
             Home
           </a>
 
           <a
             href="#transcript"
-            className="hover:text-indigo-400 transition duration-300"
+            className="navbar-link"
           >
             Transcript
           </a>
 
           <a
             href="#summary"
-            className="hover:text-indigo-400 transition duration-300"
+            className="navbar-link"
           >
             Summary
           </a>
 
           <a
             href="#developer"
-            className="hover:text-indigo-400 transition duration-300"
+            className="navbar-link"
           >
             Developer
           </a>
 
           <a
             href="#about"
-            className="hover:text-indigo-400 transition duration-300"
+            className="navbar-link"
           >
             About
+          </a>
+
+          <a
+            href="#feedback"
+            className="navbar-link"
+          >
+            Feedback
           </a>
 
         </div>
 
         {/* RIGHT SECTION */}
 
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden lg:flex items-center gap-4">
 
           {
             !user ? (
@@ -114,6 +144,7 @@ const Navbar = () => {
                 <button
                   onClick={() => setShowLogin(true)}
                   className="
+                    navbar-action
                     bg-slate-700
                     hover:bg-slate-600
                     transition
@@ -129,6 +160,7 @@ const Navbar = () => {
                 <button
                   onClick={() => setShowSignup(true)}
                   className="
+                    navbar-action
                     bg-indigo-600
                     hover:bg-indigo-500
                     transition
@@ -150,7 +182,8 @@ const Navbar = () => {
                 <div className="flex items-center gap-3">
 
                   <div
-                    className="
+                  className="
+                    navbar-avatar
                       w-[42px]
                       h-[42px]
                       rounded-full
@@ -186,6 +219,7 @@ const Navbar = () => {
                 <button
                   onClick={logout}
                   className="
+                    navbar-action
                     bg-red-500
                     hover:bg-red-400
                     transition
@@ -210,7 +244,8 @@ const Navbar = () => {
         <button
           onClick={() => setMobileMenu(!mobileMenu)}
           className="
-            md:hidden
+            navbar-icon-btn
+            lg:hidden
             text-white
             text-3xl
           "
@@ -233,8 +268,10 @@ const Navbar = () => {
 
           <div
             className="
+              navbar-mobile-menu
               fixed
               top-[70px]
+              md:top-[80px]
               left-0
               w-full
               bg-slate-900
@@ -247,14 +284,14 @@ const Navbar = () => {
               px-6
               py-6
               gap-5
-              md:hidden
+              lg:hidden
             "
           >
 
             <a
               href="#home"
               onClick={() => setMobileMenu(false)}
-              className="text-gray-300 hover:text-indigo-400"
+              className="navbar-mobile-link"
             >
               Home
             </a>
@@ -262,7 +299,7 @@ const Navbar = () => {
             <a
               href="#transcript"
               onClick={() => setMobileMenu(false)}
-              className="text-gray-300 hover:text-indigo-400"
+              className="navbar-mobile-link"
             >
               Transcript
             </a>
@@ -270,7 +307,7 @@ const Navbar = () => {
             <a
               href="#summary"
               onClick={() => setMobileMenu(false)}
-              className="text-gray-300 hover:text-indigo-400"
+              className="navbar-mobile-link"
             >
               Summary
             </a>
@@ -278,7 +315,7 @@ const Navbar = () => {
             <a
               href="#developer"
               onClick={() => setMobileMenu(false)}
-              className="text-gray-300 hover:text-indigo-400"
+              className="navbar-mobile-link"
             >
               Developer
             </a>
@@ -286,9 +323,17 @@ const Navbar = () => {
             <a
               href="#about"
               onClick={() => setMobileMenu(false)}
-              className="text-gray-300 hover:text-indigo-400"
+              className="navbar-mobile-link"
             >
               About
+            </a>
+
+            <a
+              href="#feedback"
+              onClick={() => setMobileMenu(false)}
+              className="navbar-mobile-link"
+            >
+              Feedback
             </a>
 
             {/* MOBILE AUTH */}
@@ -304,6 +349,7 @@ const Navbar = () => {
                       setMobileMenu(false);
                     }}
                     className="
+                      navbar-action
                       bg-slate-700
                       px-5
                       py-2
@@ -319,6 +365,7 @@ const Navbar = () => {
                       setMobileMenu(false);
                     }}
                     className="
+                      navbar-action
                       bg-indigo-600
                       px-5
                       py-2
@@ -338,6 +385,7 @@ const Navbar = () => {
 
                     <div
                       className="
+                        navbar-avatar
                         w-[42px]
                         h-[42px]
                         rounded-full
@@ -374,6 +422,7 @@ const Navbar = () => {
                       setMobileMenu(false);
                     }}
                     className="
+                      navbar-action
                       bg-red-500
                       px-5
                       py-2

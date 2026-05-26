@@ -5,7 +5,6 @@ import {
   useState,
 } from "react";
 import {
-  FaBars,
   FaCheckCircle,
   FaClock,
   FaTimes,
@@ -136,14 +135,13 @@ const SidebarContent = ({
   </>
 );
 
-const Sidebar = () => {
+const Sidebar = ({ mobileOpen, setMobileOpen }) => {
 
   const { user } = useContext(AuthContext);
 
   const [rooms, setRooms] = useState(
     () => user ? getHistoryRooms() : []
   );
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
 
@@ -198,15 +196,6 @@ const Sidebar = () => {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed left-4 top-[86px] z-40 bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl shadow-lg"
-        aria-label="Open sidebar"
-      >
-        <FaBars />
-      </button>
-
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-[70]">
           <button
