@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FaCamera } from "react-icons/fa";
 
 import API from "../api/axios";
 
@@ -8,6 +9,7 @@ const SignupModal = ({ setShowSignup }) => {
     name: "",
     email: "",
     password: "",
+    profilePic: "",
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -19,6 +21,42 @@ const SignupModal = ({ setShowSignup }) => {
       ...formData,
       [event.target.name]: event.target.value,
     });
+
+  };
+
+  const handleProfilePhotoChange = (event) => {
+
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose a valid image file.");
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setError("Profile photo must be under 2 MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      setFormData((currentForm) => ({
+        ...currentForm,
+        profilePic: reader.result,
+      }));
+      setError("");
+    };
+
+    reader.onerror = () => {
+      setError("Could not read that image. Try another one.");
+    };
+
+    reader.readAsDataURL(file);
 
   };
 
@@ -41,6 +79,7 @@ const SignupModal = ({ setShowSignup }) => {
         name: "",
         email: "",
         password: "",
+        profilePic: "",
       });
 
     } catch (error) {
@@ -77,6 +116,37 @@ const SignupModal = ({ setShowSignup }) => {
         </div>
 
         <form onSubmit={handleSubmit}>
+          <label className="mb-5 flex flex-col items-center gap-3 cursor-pointer">
+            <div className="relative h-24 w-24 overflow-hidden rounded-full border border-slate-700 bg-slate-800">
+              {formData.profilePic ? (
+                <img
+                  src={formData.profilePic}
+                  alt="Profile preview"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-3xl text-indigo-300">
+                  <FaCamera />
+                </div>
+              )}
+
+              <div className="absolute inset-x-0 bottom-0 bg-black/60 py-1 text-center text-xs">
+                Photo
+              </div>
+            </div>
+
+            <span className="text-sm text-indigo-300">
+              Add profile photo
+            </span>
+
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleProfilePhotoChange}
+              className="sr-only"
+            />
+          </label>
+
           <input
             type="text"
             name="name"

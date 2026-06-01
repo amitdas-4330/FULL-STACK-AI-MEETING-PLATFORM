@@ -36,6 +36,33 @@ const AuthProvider = ({ children }) => {
     setUser(userData);
   };
 
+  const updateUser = (nextUser) => {
+
+    setUser((currentUser) => {
+
+      if (!currentUser) {
+        return currentUser;
+      }
+
+      const updatedUser = {
+        ...currentUser,
+        user: {
+          ...currentUser.user,
+          ...nextUser,
+        },
+      };
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify(updatedUser)
+      );
+
+      return updatedUser;
+
+    });
+
+  };
+
   const logout = () => {
 
     localStorage.removeItem("user");
@@ -49,6 +76,7 @@ const AuthProvider = ({ children }) => {
       value={{
         user,
         login,
+        updateUser,
         logout,
       }}
     >

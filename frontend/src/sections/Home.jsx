@@ -11,11 +11,34 @@ import {
   useContext,
   useState,
 } from "react";
-import { v4 as uuidv4 } from "uuid";
 
 import LoginModal from "../components/LoginModal";
 import SignupModal from "../components/SignupModal";
 import { AuthContext } from "../context/AuthContextValue";
+
+const createRoomCode = () => {
+
+  const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
+  const segmentLength = 3;
+  const segmentCount = 3;
+
+  return Array.from(
+    {
+      length: segmentCount,
+    },
+    () =>
+      Array.from(
+        {
+          length: segmentLength,
+        },
+        () =>
+          alphabet[
+            Math.floor(Math.random() * alphabet.length)
+          ]
+      ).join("")
+  ).join("-");
+
+};
 
 const Home = () => {
 
@@ -65,7 +88,7 @@ const Home = () => {
       return;
     }
 
-    const roomId = uuidv4();
+    const roomId = createRoomCode();
 
     navigate(`/meeting/${roomId}`);
   };

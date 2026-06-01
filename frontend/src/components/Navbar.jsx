@@ -4,7 +4,89 @@ import { HiMenuAlt2, HiMenuAlt3, HiX } from "react-icons/hi";
 import LoginModal from "./LoginModal";
 import SignupModal from "./SignupModal";
 
+import API from "../api/axios";
 import { AuthContext } from "../context/AuthContextValue";
+
+const UserAvatar = ({ currentUser }) => {
+
+  const initial =
+    currentUser?.name?.charAt(0)?.toUpperCase() || "U";
+
+  return (
+    <div
+      className="
+        navbar-avatar
+        w-[42px]
+        h-[42px]
+        rounded-full
+        bg-indigo-600
+        flex
+        items-center
+        justify-center
+        font-bold
+        text-lg
+        overflow-hidden
+        shrink-0
+      "
+    >
+      {currentUser?.profilePic ? (
+        <img
+          src={currentUser.profilePic}
+          alt={`${currentUser.name || "User"} profile`}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        initial
+      )}
+    </div>
+  );
+
+};
+
+const createProfilePhotoDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    image.onload = () => {
+
+      const size = 512;
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      const scale = Math.max(
+        size / image.width,
+        size / image.height
+      );
+      const width = image.width * scale;
+      const height = image.height * scale;
+      const x = (size - width) / 2;
+      const y = (size - height) / 2;
+
+      canvas.width = size;
+      canvas.height = size;
+
+      context.drawImage(
+        image,
+        x,
+        y,
+        width,
+        height
+      );
+
+      URL.revokeObjectURL(objectUrl);
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
+
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Could not read that image."));
+    };
+
+    image.src = objectUrl;
+
+  });
 
 const Navbar = ({ onOpenSidebar }) => {
 
@@ -12,7 +94,78 @@ const Navbar = ({ onOpenSidebar }) => {
   const [showSignup, setShowSignup] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
 
-  const { user, logout } = useContext(AuthContext);
+  const {
+    user,
+    updateUser,
+    logout,
+  } = useContext(AuthContext);
+  const [photoError, setPhotoError] = useState("");
+  const [photoUploading, setPhotoUploading] = useState(false);
+
+  const handleProfilePhotoChange = async (event) => {
+
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file || photoUploading) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setPhotoError("Choose an image file.");
+      return;
+    }
+
+    if (file.size > 6 * 1024 * 1024) {
+      setPhotoError("Photo must be under 6 MB.");
+      return;
+    }
+
+    if (!user?.token) {
+      setPhotoError("Login again before updating photo.");
+      return;
+    }
+
+    setPhotoUploading(true);
+    setPhotoError("");
+
+    try {
+
+      const profilePic =
+        await createProfilePhotoDataUrl(file);
+
+      const response = await API.put(
+        "/auth/profile-photo",
+        {
+          profilePic,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        }
+      );
+
+      updateUser(response.data.user);
+
+    } catch (error) {
+
+      const status = error.response?.status;
+
+      setPhotoError(
+        error.response?.data?.message ||
+          (status
+            ? `Photo update failed (${status}).`
+            : error.message || "Could not update profile photo.")
+      );
+
+    } finally {
+
+      setPhotoUploading(false);
+
+    }
+
+  };
 
   return (
     <>
@@ -40,24 +193,6 @@ const Navbar = ({ onOpenSidebar }) => {
       >
 
         <div className="flex items-center gap-3">
-
-          {/* SIDEBAR TOGGLE */}
-
-          <button
-            type="button"
-            onClick={onOpenSidebar}
-            className="
-              navbar-icon-btn
-              lg:hidden
-              text-white
-              text-3xl
-              p-1
-              -ml-1
-            "
-            aria-label="Open sidebar"
-          >
-            <HiMenuAlt2 />
-          </button>
 
           {/* LOGO */}
 
@@ -97,13 +232,6 @@ const Navbar = ({ onOpenSidebar }) => {
           </a>
 
           <a
-            href="#transcript"
-            className="navbar-link"
-          >
-            Transcript
-          </a>
-
-          <a
             href="#summary"
             className="navbar-link"
           >
@@ -122,13 +250,6 @@ const Navbar = ({ onOpenSidebar }) => {
             className="navbar-link"
           >
             About
-          </a>
-
-          <a
-            href="#feedback"
-            className="navbar-link"
-          >
-            Feedback
           </a>
 
         </div>
@@ -181,24 +302,19 @@ const Navbar = ({ onOpenSidebar }) => {
 
                 <div className="flex items-center gap-3">
 
-                  <div
-                  className="
-                    navbar-avatar
-                      w-[42px]
-                      h-[42px]
-                      rounded-full
-                      bg-indigo-600
-                      flex
-                      items-center
-                      justify-center
-                      font-bold
-                      text-lg
-                    "
+                  <label
+                    className="cursor-pointer"
+                    title="Change profile photo"
                   >
-                    {
-                      user?.user?.name?.charAt(0)?.toUpperCase()
-                    }
-                  </div>
+                    <UserAvatar currentUser={user?.user} />
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleProfilePhotoChange}
+                      className="sr-only"
+                    />
+                  </label>
 
                   <div className="flex flex-col">
 
@@ -207,8 +323,14 @@ const Navbar = ({ onOpenSidebar }) => {
                     </span>
 
                     <span className="text-xs text-gray-400">
-                      Online
+                      {photoUploading ? "Updating photo..." : "Online"}
                     </span>
+
+                    {photoError && (
+                      <span className="text-xs text-red-300">
+                        {photoError}
+                      </span>
+                    )}
 
                   </div>
 
@@ -296,13 +418,17 @@ const Navbar = ({ onOpenSidebar }) => {
               Home
             </a>
 
-            <a
-              href="#transcript"
-              onClick={() => setMobileMenu(false)}
-              className="navbar-mobile-link"
+            <button
+              type="button"
+              onClick={() => {
+                onOpenSidebar();
+                setMobileMenu(false);
+              }}
+              className="navbar-mobile-link flex items-center gap-2 text-left"
             >
-              Transcript
-            </a>
+              <HiMenuAlt2 />
+              Meeting Tools
+            </button>
 
             <a
               href="#summary"
@@ -326,14 +452,6 @@ const Navbar = ({ onOpenSidebar }) => {
               className="navbar-mobile-link"
             >
               About
-            </a>
-
-            <a
-              href="#feedback"
-              onClick={() => setMobileMenu(false)}
-              className="navbar-mobile-link"
-            >
-              Feedback
             </a>
 
             {/* MOBILE AUTH */}
@@ -383,24 +501,19 @@ const Navbar = ({ onOpenSidebar }) => {
 
                   <div className="flex items-center gap-3 mb-4">
 
-                    <div
-                      className="
-                        navbar-avatar
-                        w-[42px]
-                        h-[42px]
-                        rounded-full
-                        bg-indigo-600
-                        flex
-                        items-center
-                        justify-center
-                        font-bold
-                        text-lg
-                      "
+                    <label
+                      className="cursor-pointer"
+                      title="Change profile photo"
                     >
-                      {
-                        user?.user?.name?.charAt(0)?.toUpperCase()
-                      }
-                    </div>
+                      <UserAvatar currentUser={user?.user} />
+
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleProfilePhotoChange}
+                        className="sr-only"
+                      />
+                    </label>
 
                     <div>
 
@@ -409,8 +522,16 @@ const Navbar = ({ onOpenSidebar }) => {
                       </h3>
 
                       <p className="text-sm text-gray-400">
-                        Logged In
+                        {photoUploading
+                          ? "Updating photo..."
+                          : "Logged In"}
                       </p>
+
+                      {photoError && (
+                        <p className="text-xs text-red-300">
+                          {photoError}
+                        </p>
+                      )}
 
                     </div>
 

@@ -6,7 +6,7 @@ const developers = [
     name: "Amit Baran Das",
     role: "MERN Stack Developer | DSA With C++ | Learning AIML",
     image: "/developers/amit-web.jpeg",
-    linkedin: "https://www.linkedin.com/",
+    linkedin: "www.linkedin.com/in/amitbarandas2a",
     github: "https://github.com/amitdas-4330",
   },
   {

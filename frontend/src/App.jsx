@@ -2,8 +2,13 @@ import {
   BrowserRouter,
   Routes,
   Route,
+  useLocation,
+  useNavigate,
 } from "react-router-dom";
-import { useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
@@ -20,6 +25,31 @@ import MeetingRoom from "./pages/MeetingRoom";
 function Dashboard() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const currentYear = new Date().getFullYear();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+
+    if (!location.state?.showFeedback) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      document
+        .getElementById("feedback")
+        ?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+
+      navigate(".", {
+        replace: true,
+        state: {},
+      });
+    }, 100);
+
+  }, [location.state, navigate]);
 
   return (
     <div className="bg-slate-950 min-h-screen text-white">
@@ -120,6 +150,21 @@ function Dashboard() {
           >
             <Feedback />
           </section>
+
+          <footer
+            className="
+              border-t
+              border-slate-800
+              py-6
+              text-center
+              text-sm
+              text-gray-400
+            "
+          >
+            <p>
+              &copy; {currentYear} MeetAI. All rights reserved.
+            </p>
+          </footer>
 
         </main>
 

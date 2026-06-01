@@ -2,6 +2,25 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
+const getUserIdFromRequest = (req) => {
+
+  const authHeader = req.headers.authorization || "";
+  const token = authHeader.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : "";
+
+  if (!token) {
+    return null;
+  }
+
+  try {
+    return jwt.verify(token, process.env.JWT_SECRET).id;
+  } catch {
+    return null;
+  }
+
+};
+
 
 // SIGNUP
 
@@ -9,7 +28,12 @@ const signup = async (req, res) => {
 
   try {
 
-    const { name, email, password } = req.body;
+    const {
+      name,
+      email,
+      password,
+      profilePic = "",
+    } = req.body;
 
     const existingUser = await User.findOne({ email });
 
@@ -25,6 +49,7 @@ const signup = async (req, res) => {
       name,
       email,
       password: hashedPassword,
+      profilePic,
     });
 
     res.status(201).json({
@@ -96,7 +121,64 @@ const login = async (req, res) => {
 
 };
 
+// UPDATE PROFILE PHOTO
+
+const updateProfilePhoto = async (req, res) => {
+
+  try {
+
+    const userId = getUserIdFromRequest(req);
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "Login required",
+      });
+    }
+
+    const { profilePic = "" } = req.body;
+
+    if (
+      profilePic &&
+      !/^data:image\/[a-zA-Z0-9.+-]+;base64,/.test(profilePic)
+    ) {
+      return res.status(400).json({
+        message: "Please upload a valid image.",
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        profilePic,
+      },
+      {
+        new: true,
+      }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      user,
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: error.message,
+    });
+
+  }
+
+};
+
 module.exports = {
   signup,
   login,
+  updateProfilePhoto,
 };

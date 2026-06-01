@@ -830,6 +830,9 @@ const MeetingRoom = () => {
 
     navigate("/", {
       replace: true,
+      state: {
+        showFeedback: true,
+      },
     });
 
   };
@@ -1209,6 +1212,9 @@ const MeetingRoom = () => {
       stopLocalMeeting();
       navigate("/", {
         replace: true,
+        state: {
+          showFeedback: true,
+        },
       });
     });
 
