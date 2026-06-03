@@ -196,17 +196,23 @@ const Navbar = ({ onOpenSidebar }) => {
 
           {/* LOGO */}
 
-          <div
+          <a
+            href="#home"
+            aria-label="MeetAI home"
             className="
-              text-2xl
-              sm:text-3xl
-              font-bold
-              text-indigo-400
+              navbar-brand
               cursor-pointer
             "
           >
-            MeetAI
-          </div>
+            <img
+              src="/meetai-icon-navbar.png"
+              alt=""
+              className="navbar-brand-logo"
+            />
+            <span className="navbar-brand-text">
+              MeetAI
+            </span>
+          </a>
 
         </div>
 
@@ -410,14 +416,6 @@ const Navbar = ({ onOpenSidebar }) => {
             "
           >
 
-            <a
-              href="#home"
-              onClick={() => setMobileMenu(false)}
-              className="navbar-mobile-link"
-            >
-              Home
-            </a>
-
             <button
               type="button"
               onClick={() => {
@@ -429,6 +427,14 @@ const Navbar = ({ onOpenSidebar }) => {
               <HiMenuAlt2 />
               Meeting Tools
             </button>
+
+            <a
+              href="#home"
+              onClick={() => setMobileMenu(false)}
+              className="navbar-mobile-link"
+            >
+              Home
+            </a>
 
             <a
               href="#summary"

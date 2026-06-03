@@ -151,19 +151,73 @@ function Dashboard() {
             <Feedback />
           </section>
 
-          <footer
-            className="
-              border-t
-              border-slate-800
-              py-6
-              text-center
-              text-sm
-              text-gray-400
-            "
-          >
-            <p>
-              &copy; {currentYear} MeetAI. All rights reserved.
-            </p>
+          <footer className="footer-shell">
+
+            <div className="footer-content">
+
+              <div className="footer-brand">
+
+                <a
+                  href="#home"
+                  aria-label="MeetAI home"
+                  className="footer-brand-link"
+                >
+                  <img
+                    src="/meetai-icon-navbar.png"
+                    alt=""
+                    className="footer-brand-logo"
+                  />
+
+                  <span className="footer-brand-name">
+                    MeetAI
+                  </span>
+                </a>
+
+                <p className="footer-brand-copy">
+                  Intelligent meeting summaries, transcripts, and insights
+                  for faster team decisions.
+                </p>
+
+              </div>
+
+              <div className="footer-links">
+
+                <a href="#home">
+                  Home
+                </a>
+
+                <a href="#summary">
+                  Summary
+                </a>
+
+                <a href="#developer">
+                  Developer
+                </a>
+
+                <a href="#about">
+                  About
+                </a>
+
+                <a href="#feedback">
+                  Feedback
+                </a>
+
+              </div>
+
+            </div>
+
+            <div className="footer-bottom">
+
+              <p>
+                &copy; {currentYear} MeetAI. All rights reserved.
+              </p>
+
+              <p>
+                Built for secure, productive AI-powered meetings.
+              </p>
+
+            </div>
+
           </footer>
 
         </main>
