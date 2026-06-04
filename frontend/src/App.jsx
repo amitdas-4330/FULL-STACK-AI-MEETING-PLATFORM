@@ -14,6 +14,7 @@ import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 
 import Home from "./sections/Home";
+import FeatureVideos from "./sections/FeatureVideos";
 import Transcript from "./sections/Transcript";
 import Summary from "./sections/Summary";
 import Developer from "./sections/Developer";
@@ -94,6 +95,17 @@ function Dashboard() {
             "
           >
             <Home />
+          </section>
+
+          {/* FEATURE VIDEOS */}
+
+          <section
+            id="feature-videos"
+            className="
+              scroll-mt-24
+            "
+          >
+            <FeatureVideos />
           </section>
 
           {/* TRANSCRIPT */}
