@@ -9,6 +9,7 @@ require("dotenv").config();
 const connectDB = require("./config/db");
 
 const authRoutes = require("./routes/authRoutes");
+const feedbackRoutes = require("./routes/feedbackRoutes");
 
 const app = express();
 
@@ -46,6 +47,7 @@ app.use(express.json({
 // ======================================================
 
 app.use("/api/auth", authRoutes);
+app.use("/api/feedback", feedbackRoutes);
 
 // ======================================================
 // ================= TEST ROUTE =========================

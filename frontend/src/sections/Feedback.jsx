@@ -10,6 +10,7 @@ import {
 } from "react-icons/fa";
 
 import { AuthContext } from "../context/AuthContextValue";
+import API from "../api/axios";
 
 const feedbackTypes = [
   "General feedback",
@@ -24,6 +25,41 @@ const initialForm = {
   type: feedbackTypes[0],
   rating: 5,
   message: "",
+};
+
+const createFeedbackId = () => {
+
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+
+  return `feedback-${Date.now()}-${Math.random()
+    .toString(16)
+    .slice(2)}`;
+
+};
+
+const saveFeedbackLocally = (feedback) => {
+
+  try {
+    const savedFeedback = JSON.parse(
+      localStorage.getItem("meetai-feedback") || "[]"
+    );
+
+    localStorage.setItem(
+      "meetai-feedback",
+      JSON.stringify([
+        feedback,
+        ...savedFeedback,
+      ])
+    );
+  } catch {
+    localStorage.setItem(
+      "meetai-feedback",
+      JSON.stringify([feedback])
+    );
+  }
+
 };
 
 const Feedback = () => {
@@ -48,7 +84,7 @@ const Feedback = () => {
     setSubmitted(false);
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
 
     event.preventDefault();
 
@@ -66,24 +102,24 @@ const Feedback = () => {
       return;
     }
 
-    const savedFeedback = JSON.parse(
-      localStorage.getItem("meetai-feedback") || "[]"
-    );
+    const feedback = {
+      ...form,
+      name,
+      email,
+      message,
+      id: createFeedbackId(),
+      createdAt: new Date().toISOString(),
+    };
 
-    localStorage.setItem(
-      "meetai-feedback",
-      JSON.stringify([
-        {
-          ...form,
-          name,
-          email,
-          message,
-          id: crypto.randomUUID(),
-          createdAt: new Date().toISOString(),
-        },
-        ...savedFeedback,
-      ])
-    );
+    try {
+      await API.post("/feedback", feedback);
+    } catch {
+      saveFeedbackLocally(feedback);
+      setError(
+        "Feedback was saved on this device, but the server could not be reached."
+      );
+      return;
+    }
 
     setForm({
       ...initialForm,
