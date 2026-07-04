@@ -531,6 +531,61 @@ const MeetingRoom = () => {
     ]
   );
 
+  const reconnectToParticipant = useCallback(
+    (participant, options = {}) => {
+
+      const targetSocketId = participant?.socketId;
+
+      if (!targetSocketId) {
+        return;
+      }
+
+      const targetParticipant =
+        knownUsersRef.current.find(
+          (knownUser) =>
+            knownUser.socketId === targetSocketId
+        ) ||
+        attendance.find(
+          (item) => item.socketId === targetSocketId
+        ) ||
+        participant;
+
+      setPeerStatusForId(
+        targetSocketId,
+        "Retry requested..."
+      );
+
+      delete pendingSignalsRef.current[targetSocketId];
+      removePeer(targetSocketId);
+
+      if (!options.remoteRequest) {
+        socket.emit("retry-video", {
+          roomId,
+          targetSocketId,
+        });
+      }
+
+      socket.emit("sync-meeting-users", {
+        roomId,
+      });
+
+      setTimeout(() => {
+        createPeerForUser(
+          targetParticipant,
+          localStreamRef.current
+        );
+      }, options.delayMs ?? 250);
+
+    },
+    [
+      attendance,
+      createPeerForUser,
+      removePeer,
+      roomId,
+      setPeerStatusForId,
+    ]
+  );
+
   const stopAiRecording = useCallback(() => {
 
     recordingActiveRef.current = false;
