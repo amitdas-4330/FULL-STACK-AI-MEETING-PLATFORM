@@ -13,22 +13,22 @@ const developers = [
     name: "Animesh Dolui",
     role: "Frontend Developer",
     image: "/developers/Animesh.jpeg",
-    linkedin: "https://www.linkedin.com/",
-    github: "https://github.com/",
+    linkedin: "www.linkedin.com/in/amitbarandas2a",
+    github: "https://github.com/amitdas-4330",
   },
   {
     name: "Ashutosh Kumar Jha",
     role: "Backend Developer",
     image: "/developers/asutosh.jpeg",
-    linkedin: "https://www.linkedin.com/",
-    github: "https://github.com/",
+    linkedin: "www.linkedin.com/in/amitbarandas2a",
+    github: "https://github.com/amitdas-4330",
   },
   {
     name: "Subhadip Patra",
     role: "UI/UX Designer",
     image: "/developers/subha-web.jpeg",
-    linkedin: "https://www.linkedin.com/",
-    github: "https://github.com/",
+    linkedin: "www.linkedin.com/in/amitbarandas2a",
+    github: "https://github.com/amitdas-4330",
   },
 ];
 
