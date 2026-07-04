@@ -15,6 +15,7 @@ import Peer from "simple-peer";
 import { useContext } from "react";
 
 import {
+  FaComments,
   FaClock,
   FaCopy,
   FaDesktop,
@@ -25,7 +26,6 @@ import {
   FaShareAlt,
   FaSignOutAlt,
   FaStop,
-  FaUsers,
   FaVideo,
   FaVideoSlash,
 } from "react-icons/fa";
@@ -202,6 +202,7 @@ const MeetingRoom = () => {
   const [stream, setStream] = useState(null);
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
+  const [chatOpen, setChatOpen] = useState(false);
   const [micOn, setMicOn] = useState(true);
   const [cameraOn, setCameraOn] = useState(true);
   const [peers, setPeers] = useState([]);
@@ -1483,32 +1484,56 @@ const MeetingRoom = () => {
               </span>
             </div>
 
-            <h1 className="mt-2 text-2xl font-bold tracking-normal md:text-3xl">
-              AI Meeting Room
-            </h1>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl font-bold tracking-normal md:text-3xl">
+                AI Meeting Room
+              </h1>
 
-            <p className="mt-1 max-w-3xl truncate text-sm text-gray-400">
-              Room: {roomId}
-            </p>
+              <span className="max-w-full truncate rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-300 sm:max-w-xs">
+                Room: {roomId}
+              </span>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={copyMeetingLink}
+                  className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-gray-100 transition hover:border-sky-400/60 hover:bg-white/10"
+                  title="Copy meeting link"
+                >
+                  <FaCopy />
+                  Copy ID
+                </button>
+
+                <button
+                  onClick={shareMeetingLink}
+                  className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-gray-100 transition hover:border-sky-400/60 hover:bg-white/10"
+                  title="Share meeting link"
+                >
+                  <FaShareAlt />
+                  Share
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={copyMeetingLink}
-              className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-100 transition hover:bg-white/10"
-              title="Copy meeting link"
+              type="button"
+              onClick={() => setChatOpen((open) => !open)}
+              aria-expanded={chatOpen}
+              className={`inline-flex items-center gap-3 rounded-lg px-4 py-2 text-sm font-black tracking-wide shadow-lg transition hover:-translate-y-0.5 ${
+                chatOpen
+                  ? "bg-sky-300 text-slate-950 shadow-sky-500/25 ring-2 ring-sky-200/70"
+                  : "bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-400 text-slate-950 shadow-sky-500/25 hover:shadow-sky-400/35"
+              }`}
+              title={chatOpen ? "Hide chat" : "Open chat"}
             >
-              <FaCopy />
-              Copy ID
-            </button>
-
-            <button
-              onClick={shareMeetingLink}
-              className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-100 transition hover:bg-white/10"
-              title="Share meeting link"
-            >
-              <FaShareAlt />
-              Share
+              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-950/15">
+                <FaComments />
+              </span>
+              CHAT
+              <span className="rounded-md bg-slate-950/15 px-2 py-0.5 text-xs font-black text-slate-950">
+                {messages.length}
+              </span>
             </button>
 
             <button
@@ -1605,17 +1630,7 @@ const MeetingRoom = () => {
                       name: peerData.name,
                     };
 
-                  removePeer(peerData.peerId);
-                  socket.emit("sync-meeting-users", {
-                    roomId,
-                  });
-
-                  setTimeout(() => {
-                    createPeerForUser(
-                      participant,
-                      localStreamRef.current
-                    );
-                  }, 250);
+                  reconnectToParticipant(participant);
                 }}
               />
             ))}
@@ -1630,17 +1645,7 @@ const MeetingRoom = () => {
                 }
                 turnConfigured={turnConfigured}
                 onReconnect={() => {
-                  setPeerStatusForId(
-                    participant.socketId,
-                    "Retry requested..."
-                  );
-                  socket.emit("sync-meeting-users", {
-                    roomId,
-                  });
-                  createPeerForUser(
-                    participant,
-                    localStreamRef.current
-                  );
+                  reconnectToParticipant(participant);
                 }}
               />
             ))}
@@ -1693,6 +1698,69 @@ const MeetingRoom = () => {
         </section>
 
         <aside className="min-w-0 space-y-4">
+
+          {chatOpen && (
+            <section className="flex h-[420px] flex-col rounded-lg border border-white/10 bg-[#0b0f18]">
+              <div className="flex items-center gap-2 border-b border-white/10 p-4 text-base font-bold">
+                <FaComments />
+                Chat
+              </div>
+
+              <div className="flex-1 space-y-3 overflow-y-auto p-4">
+                {messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className="rounded-lg border border-white/10 bg-white/[0.03] p-3"
+                  >
+                    <div className="mb-2 flex justify-between gap-3">
+                      <h3 className="truncate text-sm font-bold">
+                        {msg.sender}
+                      </h3>
+
+                      <span className="text-xs text-gray-400">
+                        {msg.time}
+                      </span>
+                    </div>
+
+                    <p className="text-sm leading-6 text-gray-200">
+                      {msg.message}
+                    </p>
+                  </div>
+                ))}
+
+                {!messages.length && (
+                  <p className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm text-gray-400">
+                    Team messages will appear here.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-3 border-t border-white/10 p-4">
+                <input
+                  type="text"
+                  value={message}
+                  onChange={(event) =>
+                    setMessage(event.target.value)
+                  }
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      sendMessage();
+                    }
+                  }}
+                  placeholder="Type message..."
+                  className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm outline-none transition focus:border-sky-400"
+                />
+
+                <button
+                  onClick={sendMessage}
+                  className="rounded-lg bg-sky-500 px-4 text-slate-950 transition hover:bg-sky-400"
+                  title="Send message"
+                >
+                  <FaPaperPlane />
+                </button>
+              </div>
+            </section>
+          )}
 
           <section className="rounded-lg border border-white/10 bg-[#0b0f18] p-4">
             <div className="mb-4 flex items-center justify-between">
@@ -1826,67 +1894,6 @@ const MeetingRoom = () => {
             <div className="min-h-[110px] whitespace-pre-wrap rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm leading-6 text-gray-200">
               {latestSummary ||
                 "Generate a short summary from the meeting transcript."}
-            </div>
-          </section>
-
-          <section className="flex h-[420px] flex-col rounded-lg border border-white/10 bg-[#0b0f18]">
-            <div className="flex items-center gap-2 border-b border-white/10 p-4 text-base font-bold">
-              <FaUsers />
-              Chat
-            </div>
-
-            <div className="flex-1 space-y-3 overflow-y-auto p-4">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className="rounded-lg border border-white/10 bg-white/[0.03] p-3"
-                >
-                  <div className="mb-2 flex justify-between gap-3">
-                    <h3 className="truncate text-sm font-bold">
-                      {msg.sender}
-                    </h3>
-
-                    <span className="text-xs text-gray-400">
-                      {msg.time}
-                    </span>
-                  </div>
-
-                  <p className="text-sm leading-6 text-gray-200">
-                    {msg.message}
-                  </p>
-                </div>
-              ))}
-
-              {!messages.length && (
-                <p className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm text-gray-400">
-                  Team messages will appear here.
-                </p>
-              )}
-            </div>
-
-            <div className="flex gap-3 border-t border-white/10 p-4">
-              <input
-                type="text"
-                value={message}
-                onChange={(event) =>
-                  setMessage(event.target.value)
-                }
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    sendMessage();
-                  }
-                }}
-                placeholder="Type message..."
-                className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm outline-none transition focus:border-sky-400"
-              />
-
-              <button
-                onClick={sendMessage}
-                className="rounded-lg bg-sky-500 px-4 text-slate-950 transition hover:bg-sky-400"
-                title="Send message"
-              >
-                <FaPaperPlane />
-              </button>
             </div>
           </section>
 

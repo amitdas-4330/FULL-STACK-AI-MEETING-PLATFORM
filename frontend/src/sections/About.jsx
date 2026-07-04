@@ -1,18 +1,15 @@
 import { motion } from "framer-motion";
 import {
   FaBrain,
-  FaCheckCircle,
   FaEnvelope,
-  FaFilePdf,
   FaGithub,
   FaMapMarkerAlt,
   FaMicrophoneAlt,
   FaPhoneAlt,
-  FaShieldAlt,
   FaUsers,
   FaVideo,
 } from "react-icons/fa";
-import { MdOutlineAutoAwesome, MdOutlineHistory } from "react-icons/md";
+import { MdOutlineAutoAwesome } from "react-icons/md";
 import {
   SiExpress,
   SiFlask,
@@ -45,13 +42,6 @@ const highlights = [
     title: "Attendance tracking",
     text: "See who joined, how long they stayed, and whether they met the required attendance time.",
   },
-];
-
-const workflow = [
-  "Start or join a room",
-  "Run AI transcription",
-  "Generate the summary",
-  "Download the report",
 ];
 
 const metrics = [
@@ -267,74 +257,6 @@ const About = () => {
             );
           })}
         </motion.div>
-
-        <div className="grid gap-5 lg:grid-cols-[0.85fr_1.15fr]">
-          <motion.div
-            className="bg-slate-800 border border-slate-700 rounded-xl p-5"
-            initial={{ opacity: 0, x: -24 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, amount: 0.2 }}
-            transition={{ duration: 0.55, ease: "easeOut" }}
-          >
-            <div className="flex items-center gap-2 text-green-300 mb-4">
-              <FaCheckCircle />
-              <h2 className="font-bold">How it works</h2>
-            </div>
-
-            <div className="space-y-3">
-              {workflow.map((step, index) => (
-                <div
-                  key={step}
-                  className="flex items-center gap-3 text-gray-300"
-                >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-indigo-300">
-                    {index + 1}
-                  </span>
-                  <span className="text-sm sm:text-base">
-                    {step}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-
-          <motion.div
-            className="bg-slate-800 border border-slate-700 rounded-xl p-5"
-            initial={{ opacity: 0, x: 24 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, amount: 0.2 }}
-            transition={{ duration: 0.55, ease: "easeOut" }}
-          >
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div>
-                <FaShieldAlt className="text-sky-300 mb-3" />
-                <h3 className="font-bold">Account access</h3>
-                <p className="text-sm text-gray-400 leading-6 mt-2">
-                  Login-gated rooms keep meeting actions connected to
-                  the signed-in user.
-                </p>
-              </div>
-
-              <div>
-                <MdOutlineHistory className="text-indigo-300 mb-3 text-xl" />
-                <h3 className="font-bold">Saved history</h3>
-                <p className="text-sm text-gray-400 leading-6 mt-2">
-                  Recent transcripts, summaries, and attendance data
-                  remain available from the dashboard.
-                </p>
-              </div>
-
-              <div>
-                <FaFilePdf className="text-rose-300 mb-3" />
-                <h3 className="font-bold">Clean reports</h3>
-                <p className="text-sm text-gray-400 leading-6 mt-2">
-                  Export meeting summaries and attendance details as
-                  PDF reports after a session.
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        </div>
 
         <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
           <motion.div
