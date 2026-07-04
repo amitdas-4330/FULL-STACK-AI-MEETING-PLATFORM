@@ -1503,7 +1503,7 @@ const MeetingRoom = () => {
       <main className="mx-auto grid max-w-[1600px] grid-cols-1 gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_420px] md:p-6">
 
         <section className="min-w-0">
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3">
+          <div className="grid gap-4 md:grid-cols-2">
 
             <div className="relative overflow-hidden rounded-lg border border-sky-400/50 bg-black shadow-2xl shadow-black/35">
               <video
@@ -1511,12 +1511,12 @@ const MeetingRoom = () => {
                 ref={userVideo}
                 autoPlay
                 playsInline
-                className="aspect-video w-full min-h-[150px] object-cover"
+                className="aspect-video w-full min-h-[260px] object-cover"
               />
 
-              <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-gradient-to-t from-black/80 to-transparent p-3">
+              <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-gradient-to-t from-black/80 to-transparent p-4">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">
+                  <p className="truncate font-semibold">
                     {screenSharing ? "You are sharing" : "You"}
                   </p>
                   <p className="text-xs text-gray-300">
@@ -1592,11 +1592,11 @@ const MeetingRoom = () => {
 
           </div>
 
-          <div className="sticky bottom-4 z-20 mx-auto mt-4 flex w-fit items-center justify-center gap-2 rounded-lg border border-white/10 bg-[#080b12]/90 p-2.5 shadow-2xl shadow-black/40 backdrop-blur">
+          <div className="sticky bottom-4 z-20 mx-auto mt-5 flex w-fit items-center justify-center gap-3 rounded-lg border border-white/10 bg-[#080b12]/90 p-3 shadow-2xl shadow-black/40 backdrop-blur">
             <button
               onClick={toggleMic}
               title={micOn ? "Mute microphone" : "Unmute microphone"}
-              className={`flex h-11 w-11 items-center justify-center rounded-lg text-base transition ${
+              className={`flex h-12 w-12 items-center justify-center rounded-lg text-lg transition ${
                 micOn
                   ? "bg-green-500 text-slate-950 hover:bg-green-400"
                   : "bg-red-500 text-white hover:bg-red-400"
@@ -1607,7 +1607,7 @@ const MeetingRoom = () => {
 
             <button
               onClick={toggleCamera}
-              className={`flex h-11 w-11 items-center justify-center rounded-lg text-base transition ${
+              className={`flex h-12 w-12 items-center justify-center rounded-lg text-lg transition ${
                 cameraOn
                   ? "bg-sky-500 text-slate-950 hover:bg-sky-400"
                   : "bg-red-500 text-white hover:bg-red-400"
@@ -1621,7 +1621,7 @@ const MeetingRoom = () => {
 
             <button
               onClick={toggleScreenSharing}
-              className={`flex h-11 w-11 items-center justify-center rounded-lg text-base transition ${
+              className={`flex h-12 w-12 items-center justify-center rounded-lg text-lg transition ${
                 screenSharing
                   ? "bg-amber-500 text-slate-950 hover:bg-amber-400"
                   : "bg-white/10 text-white hover:bg-white/15"
@@ -1981,11 +1981,11 @@ const PeerVideo = ({
         autoPlay
         ref={ref}
         muted={false}
-        className="aspect-video w-full min-h-[150px] object-cover"
+        className="aspect-video w-full min-h-[260px] object-cover"
       />
 
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3">
-        <p className="truncate text-sm font-semibold">
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+        <p className="truncate font-semibold">
           {name}
         </p>
       </div>
@@ -2017,9 +2017,9 @@ const PendingParticipant = ({
   turnConfigured,
   onReconnect,
 }) => (
-  <div className="relative flex min-h-[150px] items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-[#0b0f18]">
+  <div className="relative flex min-h-[260px] items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-[#0b0f18]">
     <div className="text-center px-5">
-      <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-xl font-bold text-sky-200">
+      <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-2xl font-bold text-sky-200">
         {name?.charAt(0)?.toUpperCase() || "?"}
       </div>
 
@@ -2033,7 +2033,7 @@ const PendingParticipant = ({
 
       <button
         onClick={onReconnect}
-        className="mt-3 rounded-lg bg-sky-500 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-sky-400"
+        className="mt-4 rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-sky-400"
       >
         Retry video
       </button>
