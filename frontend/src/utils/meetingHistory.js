@@ -56,6 +56,44 @@ export const getLatestMeetingRoom = () => {
 
 };
 
+export const clearLatestMeetingTranscripts = () => {
+
+  const history = readMeetingHistory();
+  const latestRoom = history.rooms[history.latestRoomId];
+
+  if (!latestRoom) {
+    return;
+  }
+
+  history.rooms[history.latestRoomId] = {
+    ...latestRoom,
+    transcripts: [],
+    updatedAt: new Date().toISOString(),
+  };
+
+  writeMeetingHistory(history);
+
+};
+
+export const clearLatestMeetingSummaries = () => {
+
+  const history = readMeetingHistory();
+  const latestRoom = history.rooms[history.latestRoomId];
+
+  if (!latestRoom) {
+    return;
+  }
+
+  history.rooms[history.latestRoomId] = {
+    ...latestRoom,
+    summaries: [],
+    updatedAt: new Date().toISOString(),
+  };
+
+  writeMeetingHistory(history);
+
+};
+
 export const saveMeetingTranscripts = (
   roomId,
   transcripts

@@ -22,6 +22,13 @@ client = OpenAI(
     api_key=os.getenv("OPENAI_API_KEY")
 )
 
+TRANSCRIPTION_PROMPT = """
+Transcribe meeting speech accurately.
+Ignore background noise, echoes, and filler silence.
+Preserve names, product names, code terms, acronyms, and numbers.
+Do not invent words when speech is unclear.
+"""
+
 
 @app.route("/health", methods=["GET"])
 def health_check():
@@ -147,7 +154,8 @@ def transcribe_audio():
 
             transcript = client.audio.transcriptions.create(
                 model="gpt-4o-mini-transcribe",
-                file=file
+                file=file,
+                prompt=TRANSCRIPTION_PROMPT
             )
 
         return jsonify({
@@ -224,7 +232,8 @@ def transcribe_audio_chunk():
 
             transcript = client.audio.transcriptions.create(
                 model="gpt-4o-mini-transcribe",
-                file=file
+                file=file,
+                prompt=TRANSCRIPTION_PROMPT
             )
 
         transcript_text = transcript.text.strip()
@@ -238,16 +247,12 @@ def transcribe_audio_chunk():
                 "confidence": None
             })
 
-        language_result = detect_language(transcript_text)
-
         return jsonify({
             "speaker": speaker,
             "userId": user_id,
             "transcript": transcript_text,
-            "language":
-                language_result.get("language", "unknown"),
-            "confidence":
-                language_result.get("confidence")
+            "language": "auto",
+            "confidence": None
         })
 
     except Exception as error:

@@ -1,7 +1,6 @@
 import { useContext, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  FaCheckCircle,
   FaCommentDots,
   FaEnvelope,
   FaPaperPlane,
@@ -98,58 +97,35 @@ const Feedback = () => {
 
   return (
     <motion.div
-      className="bg-slate-900 rounded-2xl p-5 sm:p-6 lg:p-8 border border-slate-800 overflow-hidden"
+      className="overflow-hidden"
       initial={{ opacity: 0, y: 28 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.18 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
     >
-      <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
-        <div>
-          <div className="inline-flex items-center gap-2 text-indigo-300 text-sm mb-3">
-            <FaCommentDots />
-            Feedback
-          </div>
-
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight">
-            Help us improve MeetAI
-          </h1>
-
-          <p className="text-gray-300 text-sm sm:text-base leading-7 mt-4">
-            Share what worked well, what felt confusing, or what you
-            would like to see next. Your feedback helps shape a better
-            meeting experience.
-          </p>
-
-          <div className="grid gap-3 sm:grid-cols-2 mt-6">
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
-              <FaCheckCircle className="text-green-300 mb-3" />
-              <h2 className="font-bold">Quick review</h2>
-              <p className="text-sm text-gray-400 leading-6 mt-2">
-                Rate the platform and leave a short message in one
-                place.
-              </p>
-            </div>
-
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
-              <FaPaperPlane className="text-indigo-300 mb-3" />
-              <h2 className="font-bold">Saved locally</h2>
-              <p className="text-sm text-gray-400 leading-6 mt-2">
-                Submissions are stored in this browser until a backend
-                feedback API is connected.
-              </p>
-            </div>
-          </div>
-        </div>
-
+      <div className="mx-auto max-w-xl">
         <motion.form
           onSubmit={handleSubmit}
-          className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4"
+          className="min-h-[640px] bg-slate-900 border border-slate-700 rounded-2xl p-6 sm:p-7 space-y-5 shadow-2xl shadow-black/30"
           initial={{ opacity: 0, x: 24 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.55, ease: "easeOut" }}
         >
+          <div className="border-b border-slate-800 pb-5 pr-12">
+            <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-300">
+              <FaCommentDots />
+            </div>
+
+            <h2 className="text-2xl font-bold">
+              Share your feedback
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-gray-400">
+              Tell us how the meeting experience felt.
+            </p>
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
               <span className="flex items-center gap-2 text-sm font-semibold text-gray-200 mb-2">
@@ -162,7 +138,7 @@ const Feedback = () => {
                   updateField("name", event.target.value)
                 }
                 placeholder="Your name"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 outline-none transition focus:border-indigo-500"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
               />
             </label>
 
@@ -178,7 +154,7 @@ const Feedback = () => {
                   updateField("email", event.target.value)
                 }
                 placeholder="you@example.com"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 outline-none transition focus:border-indigo-500"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
               />
             </label>
           </div>
@@ -193,7 +169,7 @@ const Feedback = () => {
                 onChange={(event) =>
                   updateField("type", event.target.value)
                 }
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 outline-none transition focus:border-indigo-500"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
               >
                 {feedbackTypes.map((type) => (
                   <option
@@ -210,7 +186,7 @@ const Feedback = () => {
               <span className="block text-sm font-semibold text-gray-200 mb-2">
                 Rating
               </span>
-              <div className="flex items-center gap-1 rounded-xl bg-slate-900 border border-slate-700 px-3 py-3">
+              <div className="flex items-center gap-1 rounded-xl bg-slate-950 border border-slate-700 px-3 py-3.5">
                 {[1, 2, 3, 4, 5].map((rating) => (
                   <button
                     key={rating}
@@ -240,8 +216,8 @@ const Feedback = () => {
                 updateField("message", event.target.value)
               }
               placeholder="Write your feedback here..."
-              rows="5"
-              className="w-full resize-none bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 outline-none transition focus:border-indigo-500"
+              rows="8"
+              className="min-h-[190px] w-full resize-none bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
             />
           </label>
 
@@ -259,7 +235,7 @@ const Feedback = () => {
 
           <button
             type="submit"
-            className="navbar-action flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 font-semibold transition hover:bg-indigo-500 sm:w-auto"
+            className="navbar-action flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3.5 font-semibold transition hover:bg-indigo-500"
           >
             <FaPaperPlane />
             Submit Feedback

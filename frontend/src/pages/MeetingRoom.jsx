@@ -50,6 +50,19 @@ const ATTENDANCE_OPTIONS = [
   60,
 ];
 
+const AI_TRANSCRIPT_SEGMENT_MS = 3500;
+const AI_TRANSCRIPT_MIN_BLOB_SIZE = 1000;
+const AI_TRANSCRIPT_AUDIO_BITS_PER_SECOND = 96000;
+
+const MICROPHONE_AUDIO_CONSTRAINTS = {
+  echoCancellation: true,
+  noiseSuppression: true,
+  autoGainControl: true,
+  channelCount: {
+    ideal: 1,
+  },
+};
+
 const PEER_CONFIG = {
   iceServers: [
     {
@@ -138,6 +151,26 @@ const setMediaTrackEnabled = (track, enabled) => {
 const playVideo = (video) => {
 
   video?.play?.().catch(() => {});
+
+};
+
+const getMeetingMediaStream = async () => {
+
+  try {
+    return await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: MICROPHONE_AUDIO_CONSTRAINTS,
+    });
+  } catch (error) {
+    if (error?.name === "NotAllowedError") {
+      throw error;
+    }
+
+    return navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: true,
+    });
+  }
 
 };
 
@@ -681,15 +714,19 @@ const MeetingRoom = () => {
       "audio/mp4",
     ].find((type) => MediaRecorder.isTypeSupported(type));
     const mimeType = supportedMimeType || "audio/webm";
-    const recorderOptions = supportedMimeType
-      ? {
-          mimeType: supportedMimeType,
-        }
-      : undefined;
+    const recorderOptions = {
+      audioBitsPerSecond:
+        AI_TRANSCRIPT_AUDIO_BITS_PER_SECOND,
+      ...(supportedMimeType
+        ? {
+            mimeType: supportedMimeType,
+          }
+        : {}),
+    };
 
     const sendCompleteAudioBlob = async (blob) => {
 
-      if (blob.size < 1000) {
+      if (blob.size < AI_TRANSCRIPT_MIN_BLOB_SIZE) {
         return;
       }
 
@@ -739,6 +776,11 @@ const MeetingRoom = () => {
 
       recorder.onstop = async () => {
 
+        if (recorderTimerRef.current) {
+          clearTimeout(recorderTimerRef.current);
+          recorderTimerRef.current = null;
+        }
+
         const chunks = recorderChunksRef.current;
 
         if (chunks.length) {
@@ -766,7 +808,7 @@ const MeetingRoom = () => {
           recorder.stop();
         }
 
-      }, 8000);
+      }, AI_TRANSCRIPT_SEGMENT_MS);
 
     };
 
@@ -861,11 +903,7 @@ const MeetingRoom = () => {
     let mounted = true;
     let localStream = null;
 
-    navigator.mediaDevices
-      .getUserMedia({
-        video: true,
-        audio: true,
-      })
+    getMeetingMediaStream()
       .then((currentStream) => {
 
         if (!mounted) return;

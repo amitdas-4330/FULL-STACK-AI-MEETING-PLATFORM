@@ -9,6 +9,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { FaTimes } from "react-icons/fa";
 
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
@@ -26,6 +27,8 @@ import MeetingRoom from "./pages/MeetingRoom";
 function Dashboard() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [productDemoOpen, setProductDemoOpen] = useState(false);
   const currentYear = new Date().getFullYear();
   const location = useLocation();
   const navigate = useNavigate();
@@ -36,19 +39,18 @@ function Dashboard() {
       return;
     }
 
-    window.setTimeout(() => {
-      document
-        .getElementById("feedback")
-        ?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-
-      navigate(".", {
-        replace: true,
-        state: {},
-      });
+    const feedbackTimer = window.setTimeout(() => {
+      setFeedbackOpen(true);
     }, 100);
+
+    navigate(".", {
+      replace: true,
+      state: {},
+    });
+
+    return () => {
+      window.clearTimeout(feedbackTimer);
+    };
 
   }, [location.state, navigate]);
 
@@ -66,6 +68,7 @@ function Dashboard() {
         <Sidebar
           mobileOpen={sidebarOpen}
           setMobileOpen={setSidebarOpen}
+          onOpenProductDemo={() => setProductDemoOpen(true)}
         />
 
         {/* MAIN CONTENT */}
@@ -95,17 +98,6 @@ function Dashboard() {
             "
           >
             <Home />
-          </section>
-
-          {/* FEATURE VIDEOS */}
-
-          <section
-            id="feature-videos"
-            className="
-              scroll-mt-24
-            "
-          >
-            <FeatureVideos />
           </section>
 
           {/* TRANSCRIPT */}
@@ -150,17 +142,6 @@ function Dashboard() {
             "
           >
             <About />
-          </section>
-
-          {/* FEEDBACK */}
-
-          <section
-            id="feedback"
-            className="
-              scroll-mt-24
-            "
-          >
-            <Feedback />
           </section>
 
           <footer className="footer-shell">
@@ -210,10 +191,6 @@ function Dashboard() {
                   About
                 </a>
 
-                <a href="#feedback">
-                  Feedback
-                </a>
-
               </div>
 
             </div>
@@ -221,11 +198,11 @@ function Dashboard() {
             <div className="footer-bottom">
 
               <p>
-                &copy; {currentYear} MeetAI. All rights reserved.
+                Built for secure, productive AI-powered meetings.
               </p>
 
               <p>
-                Built for secure, productive AI-powered meetings.
+                &copy; {currentYear} MeetAI. All rights reserved.
               </p>
 
             </div>
@@ -235,6 +212,54 @@ function Dashboard() {
         </main>
 
       </div>
+
+      {feedbackOpen && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 px-3 py-5">
+          <button
+            type="button"
+            aria-label="Close feedback form"
+            className="absolute inset-0 cursor-default"
+            onClick={() => setFeedbackOpen(false)}
+          />
+
+          <div className="relative z-10 w-full max-w-xl max-h-[92vh] overflow-y-auto">
+            <button
+              type="button"
+              aria-label="Close feedback form"
+              onClick={() => setFeedbackOpen(false)}
+              className="absolute right-3 top-3 z-20 rounded-full bg-slate-950/90 p-3 text-white transition hover:bg-slate-800"
+            >
+              <FaTimes />
+            </button>
+
+            <Feedback />
+          </div>
+        </div>
+      )}
+
+      {productDemoOpen && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 px-3 py-5">
+          <button
+            type="button"
+            aria-label="Close product demo"
+            className="absolute inset-0 cursor-default"
+            onClick={() => setProductDemoOpen(false)}
+          />
+
+          <div className="relative z-10 w-full max-w-6xl max-h-[92vh] overflow-y-auto">
+            <button
+              type="button"
+              aria-label="Close product demo"
+              onClick={() => setProductDemoOpen(false)}
+              className="absolute right-3 top-3 z-20 rounded-full bg-slate-950/90 p-3 text-white transition hover:bg-slate-800"
+            >
+              <FaTimes />
+            </button>
+
+            <FeatureVideos />
+          </div>
+        </div>
+      )}
 
     </div>
   );

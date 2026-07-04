@@ -7,6 +7,7 @@ import {
 import {
   FaCheckCircle,
   FaClock,
+  FaPlayCircle,
   FaTimes,
 } from "react-icons/fa";
 import { MdHistory } from "react-icons/md";
@@ -44,8 +45,21 @@ const SidebarContent = ({
   presentCount,
   summaryHistory,
   onNavigate,
+  onOpenProductDemo,
 }) => (
   <>
+    <button
+      type="button"
+      onClick={() => {
+        onOpenProductDemo();
+        onNavigate?.();
+      }}
+      className="flex w-full items-center justify-center gap-2 rounded-xl border border-sky-400/30 bg-sky-500/10 px-4 py-3 text-sm font-bold text-sky-100 transition hover:border-sky-300/60 hover:bg-sky-500/20"
+    >
+      <FaPlayCircle />
+      Product Demo
+    </button>
+
     <section className="bg-slate-800 border border-slate-700 rounded-xl p-4">
       <div className="flex items-center justify-between gap-3 mb-3">
         <h2 className="font-bold flex items-center gap-2">
@@ -135,7 +149,11 @@ const SidebarContent = ({
   </>
 );
 
-const Sidebar = ({ mobileOpen, setMobileOpen }) => {
+const Sidebar = ({
+  mobileOpen,
+  setMobileOpen,
+  onOpenProductDemo,
+}) => {
 
   const { user } = useContext(AuthContext);
 
@@ -227,6 +245,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }) => {
               presentCount={presentCount}
               summaryHistory={summaryHistory}
               onNavigate={() => setMobileOpen(false)}
+              onOpenProductDemo={onOpenProductDemo}
             />
           </aside>
         </div>
@@ -240,6 +259,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }) => {
           attendance={attendance}
           presentCount={presentCount}
           summaryHistory={summaryHistory}
+          onOpenProductDemo={onOpenProductDemo}
         />
       </aside>
     </>

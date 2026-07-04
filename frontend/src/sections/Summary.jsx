@@ -3,10 +3,19 @@ import {
   useEffect,
   useState,
 } from "react";
-import { FaDownload } from "react-icons/fa";
+import {
+  FaDownload,
+  FaFileAlt,
+  FaHistory,
+  FaLightbulb,
+  FaSyncAlt,
+} from "react-icons/fa";
 
 import { AuthContext } from "../context/AuthContextValue";
-import { getLatestMeetingRoom } from "../utils/meetingHistory";
+import {
+  clearLatestMeetingSummaries,
+  getLatestMeetingRoom,
+} from "../utils/meetingHistory";
 import { downloadMeetingReport } from "../utils/meetingReportPdf";
 
 const Summary = () => {
@@ -50,6 +59,16 @@ const Summary = () => {
   const summaries = latestRoom?.summaries || [];
   const latestSummary =
     summaries[summaries.length - 1];
+  const hasSummary = Boolean(latestSummary);
+  const transcriptCount =
+    latestRoom?.transcripts?.length || 0;
+
+  const handleRefreshSummary = () => {
+
+    clearLatestMeetingSummaries();
+    setLatestRoom(user ? getLatestMeetingRoom() : null);
+
+  };
 
   const handleDownloadPdf = () => {
 
@@ -71,65 +90,130 @@ const Summary = () => {
   };
 
   return (
-    <div className="bg-slate-900 rounded-2xl p-5 sm:p-6 border border-slate-800">
-      <div className="flex flex-col gap-2 mb-5">
-        <h1 className="text-2xl sm:text-3xl font-bold">
-          AI Summary
-        </h1>
+    <div className="rounded-3xl border border-slate-800 bg-slate-900 p-5 shadow-2xl shadow-black/20 sm:p-7 lg:p-8">
+      <div className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-indigo-400/20 bg-indigo-400/10 px-3 py-1 text-sm font-semibold text-indigo-200">
+            <FaLightbulb />
+            AI notes
+          </div>
 
-        <p className="text-gray-400 text-sm max-w-3xl leading-6">
-          {latestRoom
-            ? `Latest saved room: ${latestRoom.roomId}`
-            : "Generate a summary inside a meeting to see it here."}
-        </p>
+          <h1 className="text-2xl font-bold sm:text-3xl">
+            Meeting Summary
+          </h1>
+
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-gray-400 sm:text-base">
+            {latestRoom
+              ? `Review the latest AI summary from room ${latestRoom.roomId}.`
+              : "Generate a summary inside a meeting to see concise notes here."}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {hasSummary && (
+            <button
+              type="button"
+              onClick={handleDownloadPdf}
+              className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold transition hover:bg-indigo-500"
+            >
+              <FaDownload />
+              PDF
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={handleRefreshSummary}
+            disabled={!hasSummary}
+            className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-semibold transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <FaSyncAlt />
+            Refresh
+          </button>
+        </div>
       </div>
 
-      {latestSummary ? (
-        <div className="space-y-4">
-          <div className="bg-slate-800 p-5 rounded-xl border border-slate-700">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
-              <h3 className="text-indigo-300 font-bold">
-                Short Summary
-              </h3>
+      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+          <div className="mb-2 flex items-center gap-2 text-sm text-indigo-200">
+            <FaFileAlt />
+            Summaries
+          </div>
+          <p className="text-2xl font-bold">
+            {summaries.length}
+          </p>
+        </div>
 
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-gray-400">
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+          <div className="mb-2 flex items-center gap-2 text-sm text-cyan-200">
+            <FaHistory />
+            Transcript lines
+          </div>
+          <p className="text-2xl font-bold">
+            {transcriptCount}
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+          <div className="mb-2 flex items-center gap-2 text-sm text-emerald-200">
+            <FaLightbulb />
+            Updated
+          </div>
+          <p className="truncate text-lg font-bold">
+            {latestSummary?.createdAt
+              ? new Date(
+                  latestSummary.createdAt
+                ).toLocaleDateString()
+              : "--"}
+          </p>
+        </div>
+      </div>
+
+      {hasSummary ? (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 sm:p-6">
+            <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="font-bold text-indigo-200">
+                  Latest Summary
+                </h3>
+
+                <p className="mt-1 text-xs text-gray-500">
                   {latestSummary.createdAt
                     ? new Date(
                         latestSummary.createdAt
                       ).toLocaleString()
-                    : ""}
-                </span>
-
-                <button
-                  onClick={handleDownloadPdf}
-                  className="bg-indigo-600 hover:bg-indigo-500 px-3 py-2 rounded-lg text-sm flex items-center gap-2"
-                >
-                  <FaDownload />
-                  PDF
-                </button>
+                    : "Recently generated"}
+                </p>
               </div>
             </div>
 
-            <div className="whitespace-pre-wrap text-gray-200 text-sm leading-6">
+            <div className="whitespace-pre-wrap rounded-2xl border border-slate-800 bg-slate-900/70 p-5 text-sm leading-7 text-gray-200">
               {latestSummary.summary}
             </div>
           </div>
 
           {summaries.length > 1 && (
-            <div className="bg-slate-800 p-5 rounded-xl border border-slate-700">
-              <h3 className="font-bold mb-3">
-                Summary History
-              </h3>
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="flex items-center gap-2 font-bold">
+                  <FaHistory className="text-indigo-300" />
+                  Summary History
+                </h3>
 
-              <div className="space-y-3 max-h-[260px] overflow-y-auto">
+                <span className="rounded-full bg-slate-800 px-3 py-1 text-xs text-gray-400">
+                  {summaries.length - 1} older
+                </span>
+              </div>
+
+              <div className="max-h-[280px] space-y-3 overflow-y-auto pr-1">
                 {summaries
                   .slice(0, -1)
                   .reverse()
                   .map((item) => (
                     <div
                       key={item.id}
-                      className="bg-slate-900 p-4 rounded-xl text-sm text-gray-300"
+                      className="rounded-xl border border-slate-800 bg-slate-900/80 p-4 text-sm text-gray-300 transition hover:border-slate-600"
                     >
                       <div className="text-xs text-gray-500 mb-2">
                         {item.createdAt
@@ -149,10 +233,19 @@ const Summary = () => {
           )}
         </div>
       ) : (
-        <div className="bg-slate-800 p-5 rounded-xl border border-slate-700 text-gray-300">
-          No summary saved yet. Open a meeting room, collect
-          transcript lines, click Generate in the Summary panel,
-          then return here.
+        <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-950/60 p-8 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-400/10 text-indigo-200">
+            <FaLightbulb size={22} />
+          </div>
+
+          <h2 className="text-xl font-bold">
+            No summary saved yet
+          </h2>
+
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-400">
+            Open a meeting room, collect transcript lines, click
+            Generate in the Summary panel, then return here.
+          </p>
         </div>
       )}
     </div>
