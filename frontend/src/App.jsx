@@ -39,18 +39,14 @@ function Dashboard() {
       return;
     }
 
-    const feedbackTimer = window.setTimeout(() => {
+    window.setTimeout(() => {
       setFeedbackOpen(true);
-    }, 100);
+    }, 0);
 
     navigate(".", {
       replace: true,
       state: {},
     });
-
-    return () => {
-      window.clearTimeout(feedbackTimer);
-    };
 
   }, [location.state, navigate]);
 
