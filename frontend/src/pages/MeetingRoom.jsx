@@ -1415,23 +1415,32 @@ const MeetingRoom = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-[#05070d] text-white">
 
-      <div className="p-5 border-b border-slate-800 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-[#080b12]/95 px-4 py-3 backdrop-blur md:px-6">
+        <div className="mx-auto flex max-w-[1600px] flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase text-sky-300">
+              <span className="h-2 w-2 rounded-full bg-green-400" />
+              Live meeting
+              <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1 normal-case text-gray-300">
+                {participantCount} participants
+              </span>
+            </div>
 
-        <div>
-          <h1 className="text-3xl font-bold">
-            AI Meeting Room
-          </h1>
+            <h1 className="mt-2 text-2xl font-bold tracking-normal md:text-3xl">
+              AI Meeting Room
+            </h1>
 
-          <p className="text-gray-400 break-all">
-            Room: {roomId}
-          </p>
+            <p className="mt-1 max-w-3xl truncate text-sm text-gray-400">
+              Room: {roomId}
+            </p>
+          </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={copyMeetingLink}
-              className="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-3 py-2 text-sm text-gray-100 hover:bg-slate-700"
+              className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-100 transition hover:bg-white/10"
               title="Copy meeting link"
             >
               <FaCopy />
@@ -1440,81 +1449,85 @@ const MeetingRoom = () => {
 
             <button
               onClick={shareMeetingLink}
-              className="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-3 py-2 text-sm text-gray-100 hover:bg-slate-700"
+              className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-100 transition hover:bg-white/10"
               title="Share meeting link"
             >
               <FaShareAlt />
               Share
             </button>
 
-            {shareStatus && (
-              <span className="text-sm text-green-300">
-                {shareStatus}
-              </span>
-            )}
+            <button
+              onClick={toggleAiRecording}
+              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                aiRecording
+                  ? "bg-red-500 text-white hover:bg-red-400"
+                  : "bg-sky-500 text-slate-950 hover:bg-sky-400"
+              }`}
+            >
+              {aiRecording ? <FaStop /> : <FaRobot />}
+              {aiRecording ? "Stop AI" : "Start AI"}
+            </button>
+
+            <button
+              onClick={stopMeeting}
+              disabled={!meetingSettings.isHost}
+              title={
+                meetingSettings.isHost
+                  ? "Stop meeting for everyone"
+                  : "Only the host can stop the meeting"
+              }
+              className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold transition hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-gray-500"
+            >
+              <FaStop />
+              Stop
+            </button>
+
+            <button
+              onClick={leaveMeeting}
+              title="Leave this meeting"
+              className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-amber-400"
+            >
+              <FaSignOutAlt />
+              Leave
+            </button>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="text-green-400">
-            {participantCount} Participants
+        {(shareStatus || aiStatus) && (
+          <div className="mx-auto mt-3 max-w-[1600px] rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-300">
+            {shareStatus || aiStatus}
           </div>
+        )}
+      </header>
 
-          <button
-            onClick={toggleAiRecording}
-            className={`px-4 py-3 rounded-xl flex items-center gap-2 ${
-              aiRecording
-                ? "bg-red-600"
-                : "bg-indigo-600"
-            }`}
-          >
-            {aiRecording ? <FaStop /> : <FaRobot />}
-            {aiRecording ? "Stop AI" : "Start AI"}
-          </button>
+      <main className="mx-auto grid max-w-[1600px] grid-cols-1 gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_420px] md:p-6">
 
-          <button
-            onClick={stopMeeting}
-            disabled={!meetingSettings.isHost}
-            title={
-              meetingSettings.isHost
-                ? "Stop meeting for everyone"
-                : "Only the host can stop the meeting"
-            }
-            className="px-4 py-3 rounded-xl flex items-center gap-2 bg-red-700 disabled:bg-slate-700 disabled:text-gray-400"
-          >
-            <FaStop />
-            Stop Meeting
-          </button>
+        <section className="min-w-0">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3">
 
-          <button
-            onClick={leaveMeeting}
-            title="Leave this meeting"
-            className="px-4 py-3 rounded-xl flex items-center gap-2 bg-amber-600 hover:bg-amber-500"
-          >
-            <FaSignOutAlt />
-            Leave
-          </button>
-        </div>
-
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-5 p-5">
-
-        <div className="xl:col-span-3">
-
-          <div className="grid md:grid-cols-2 gap-5">
-
-            <div className="bg-slate-900 rounded-3xl overflow-hidden relative border border-indigo-500">
+            <div className="relative overflow-hidden rounded-lg border border-sky-400/50 bg-black shadow-2xl shadow-black/35">
               <video
                 muted
                 ref={userVideo}
                 autoPlay
                 playsInline
-                className="w-full h-[300px] object-cover bg-black"
+                className="aspect-video w-full min-h-[150px] object-cover"
               />
 
-              <div className="absolute bottom-3 left-3 bg-black/70 px-4 py-2 rounded-xl">
-                {screenSharing ? "You are sharing" : "You"}
+              <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-gradient-to-t from-black/80 to-transparent p-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">
+                    {screenSharing ? "You are sharing" : "You"}
+                  </p>
+                  <p className="text-xs text-gray-300">
+                    {micOn ? "Mic on" : "Mic muted"} -{" "}
+                    {cameraOn ? "Camera on" : "Camera off"}
+                  </p>
+                </div>
+
+                <span className="rounded-md bg-sky-400 px-2 py-1 text-xs font-bold text-slate-950">
+                  Local
+                </span>
               </div>
             </div>
 
@@ -1579,11 +1592,14 @@ const MeetingRoom = () => {
 
           </div>
 
-          <div className="flex justify-center gap-5 mt-6">
+          <div className="sticky bottom-4 z-20 mx-auto mt-4 flex w-fit items-center justify-center gap-2 rounded-lg border border-white/10 bg-[#080b12]/90 p-2.5 shadow-2xl shadow-black/40 backdrop-blur">
             <button
               onClick={toggleMic}
-              className={`p-5 rounded-full ${
-                micOn ? "bg-green-600" : "bg-red-600"
+              title={micOn ? "Mute microphone" : "Unmute microphone"}
+              className={`flex h-11 w-11 items-center justify-center rounded-lg text-base transition ${
+                micOn
+                  ? "bg-green-500 text-slate-950 hover:bg-green-400"
+                  : "bg-red-500 text-white hover:bg-red-400"
               }`}
             >
               {micOn ? <FaMicrophone /> : <FaMicrophoneSlash />}
@@ -1591,8 +1607,10 @@ const MeetingRoom = () => {
 
             <button
               onClick={toggleCamera}
-              className={`p-5 rounded-full ${
-                cameraOn ? "bg-indigo-600" : "bg-red-600"
+              className={`flex h-11 w-11 items-center justify-center rounded-lg text-base transition ${
+                cameraOn
+                  ? "bg-sky-500 text-slate-950 hover:bg-sky-400"
+                  : "bg-red-500 text-white hover:bg-red-400"
               }`}
               title={
                 cameraOn ? "Turn camera off" : "Turn camera on"
@@ -1603,10 +1621,10 @@ const MeetingRoom = () => {
 
             <button
               onClick={toggleScreenSharing}
-              className={`p-5 rounded-full ${
+              className={`flex h-11 w-11 items-center justify-center rounded-lg text-base transition ${
                 screenSharing
-                  ? "bg-amber-500"
-                  : "bg-sky-600"
+                  ? "bg-amber-500 text-slate-950 hover:bg-amber-400"
+                  : "bg-white/10 text-white hover:bg-white/15"
               }`}
               title={
                 screenSharing
@@ -1617,30 +1635,23 @@ const MeetingRoom = () => {
               <FaDesktop />
             </button>
           </div>
+        </section>
 
-          {aiStatus && (
-            <p className="text-center text-sm text-gray-400 mt-4">
-              {aiStatus}
-            </p>
-          )}
+        <aside className="min-w-0 space-y-4">
 
-        </div>
-
-        <div className="xl:col-span-2 space-y-5">
-
-          <section className="bg-slate-900 rounded-3xl border border-slate-800 p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold flex items-center gap-2">
+          <section className="rounded-lg border border-white/10 bg-[#0b0f18] p-4">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-base font-bold">
                 <FaClock />
                 Attendance
               </h2>
 
-              <span className="text-sm text-indigo-300">
+              <span className="rounded-md bg-sky-400/10 px-2 py-1 text-xs font-semibold text-sky-200">
                 {meetingSettings.attendanceThresholdMinutes} min
               </span>
             </div>
 
-            <div className="grid grid-cols-4 gap-2 mb-4">
+            <div className="mb-4 grid grid-cols-4 gap-2">
               {ATTENDANCE_OPTIONS.map((minutes) => (
                 <button
                   key={minutes}
@@ -1653,64 +1664,72 @@ const MeetingRoom = () => {
                       ? `Set attendance time to ${minutes} minutes`
                       : "Only the host can change attendance time"
                   }
-                  className={`py-2 rounded-xl text-sm ${
+                  className={`rounded-lg py-2 text-sm ${
                     meetingSettings.attendanceThresholdMinutes ===
                     minutes
-                      ? "bg-indigo-600"
-                      : "bg-slate-800"
-                  } disabled:cursor-not-allowed disabled:opacity-50`}
+                      ? "bg-sky-500 text-slate-950"
+                      : "bg-white/5 text-gray-300 hover:bg-white/10"
+                  } transition disabled:cursor-not-allowed disabled:opacity-50`}
                 >
                   {minutes}m
                 </button>
               ))}
             </div>
 
-            <div className="space-y-3 max-h-[220px] overflow-y-auto">
+            <div className="max-h-[210px] space-y-2 overflow-y-auto pr-1">
               {attendance.map((user) => (
                 <div
                   key={user.socketId || user.userId}
-                  className="bg-slate-800 p-3 rounded-2xl flex items-center justify-between gap-3"
+                  className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] p-3"
                 >
-                  <div>
-                    <p className="font-semibold">{user.name}</p>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">
+                      {user.name}
+                    </p>
                     <p className="text-xs text-gray-400">
                       {user.elapsedMinutes || 0} minutes
                     </p>
                   </div>
 
                   <span
-                    className={`text-sm ${
+                    className={`shrink-0 rounded-md px-2 py-1 text-xs font-semibold ${
                       user.present
-                        ? "text-green-400"
-                        : "text-yellow-400"
+                        ? "bg-green-400/10 text-green-300"
+                        : "bg-amber-400/10 text-amber-300"
                     }`}
                   >
                     {user.present ? "Present" : "Waiting"}
                   </span>
                 </div>
               ))}
+
+              {!attendance.length && (
+                <p className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm text-gray-400">
+                  Attendance appears when participants join.
+                </p>
+              )}
             </div>
           </section>
 
-          <section className="bg-slate-900 rounded-3xl border border-slate-800 p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">
+          <section className="rounded-lg border border-white/10 bg-[#0b0f18] p-4">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-base font-bold">
                 Live Transcript
               </h2>
 
-              <span className="text-sm text-gray-400">
+              <span className="rounded-md bg-white/5 px-2 py-1 text-xs font-semibold text-gray-300">
                 {transcripts.length}
               </span>
             </div>
 
-            <div className="space-y-3 max-h-[260px] overflow-y-auto">
+            <div className="max-h-[230px] space-y-2 overflow-y-auto pr-1">
               {transcripts.map((item) => (
                 <div
                   key={item.id}
-                  className="bg-slate-800 p-3 rounded-2xl"
+                  className="rounded-lg border border-white/10 bg-white/[0.03] p-3"
                 >
-                  <div className="flex items-center justify-between gap-3 mb-2">
-                    <h3 className="font-bold text-green-400">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <h3 className="truncate text-sm font-bold text-green-300">
                       {item.speaker}
                     </h3>
 
@@ -1724,12 +1743,18 @@ const MeetingRoom = () => {
                   </p>
                 </div>
               ))}
+
+              {!transcripts.length && (
+                <p className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm text-gray-400">
+                  Start AI to capture live transcript notes.
+                </p>
+              )}
             </div>
           </section>
 
-          <section className="bg-slate-900 rounded-3xl border border-slate-800 p-5">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <h2 className="text-xl font-bold flex items-center gap-2">
+          <section className="rounded-lg border border-white/10 bg-[#0b0f18] p-4">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="flex items-center gap-2 text-base font-bold">
                 <FaRobot />
                 Summary
               </h2>
@@ -1737,32 +1762,32 @@ const MeetingRoom = () => {
               <button
                 onClick={generateSummary}
                 disabled={summaryLoading}
-                className="bg-indigo-600 disabled:bg-slate-700 px-4 py-2 rounded-xl text-sm"
+                className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-sky-400 disabled:bg-white/10 disabled:text-gray-500"
               >
                 {summaryLoading ? "Working" : "Generate"}
               </button>
             </div>
 
-            <div className="bg-slate-800 rounded-2xl p-4 min-h-[120px] whitespace-pre-wrap text-sm text-gray-200">
+            <div className="min-h-[110px] whitespace-pre-wrap rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm leading-6 text-gray-200">
               {latestSummary ||
                 "Generate a short summary from the meeting transcript."}
             </div>
           </section>
 
-          <section className="bg-slate-900 rounded-3xl border border-slate-800 flex flex-col h-[420px]">
-            <div className="p-5 border-b border-slate-800 text-xl font-bold flex items-center gap-2">
+          <section className="flex h-[420px] flex-col rounded-lg border border-white/10 bg-[#0b0f18]">
+            <div className="flex items-center gap-2 border-b border-white/10 p-4 text-base font-bold">
               <FaUsers />
               Chat
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 space-y-3 overflow-y-auto p-4">
               {messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className="bg-slate-800 p-4 rounded-2xl"
+                  className="rounded-lg border border-white/10 bg-white/[0.03] p-3"
                 >
-                  <div className="flex justify-between mb-2">
-                    <h3 className="font-bold">
+                  <div className="mb-2 flex justify-between gap-3">
+                    <h3 className="truncate text-sm font-bold">
                       {msg.sender}
                     </h3>
 
@@ -1771,12 +1796,20 @@ const MeetingRoom = () => {
                     </span>
                   </div>
 
-                  <p>{msg.message}</p>
+                  <p className="text-sm leading-6 text-gray-200">
+                    {msg.message}
+                  </p>
                 </div>
               ))}
+
+              {!messages.length && (
+                <p className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm text-gray-400">
+                  Team messages will appear here.
+                </p>
+              )}
             </div>
 
-            <div className="p-4 border-t border-slate-800 flex gap-3">
+            <div className="flex gap-3 border-t border-white/10 p-4">
               <input
                 type="text"
                 value={message}
@@ -1789,21 +1822,22 @@ const MeetingRoom = () => {
                   }
                 }}
                 placeholder="Type message..."
-                className="flex-1 bg-slate-800 px-4 py-3 rounded-2xl outline-none min-w-0"
+                className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm outline-none transition focus:border-sky-400"
               />
 
               <button
                 onClick={sendMessage}
-                className="bg-indigo-600 px-5 rounded-2xl"
+                className="rounded-lg bg-sky-500 px-4 text-slate-950 transition hover:bg-sky-400"
+                title="Send message"
               >
                 <FaPaperPlane />
               </button>
             </div>
           </section>
 
-        </div>
+        </aside>
 
-      </div>
+      </main>
 
     </div>
   );
@@ -1941,27 +1975,31 @@ const PeerVideo = ({
     /closed|failed|blocked/i.test(peerStatus);
 
   return (
-    <div className="bg-slate-900 rounded-3xl overflow-hidden border border-slate-800 relative">
+    <div className="relative overflow-hidden rounded-lg border border-white/10 bg-black shadow-2xl shadow-black/30">
       <video
         playsInline
         autoPlay
         ref={ref}
         muted={false}
-        className="w-full h-[300px] object-cover bg-black"
+        className="aspect-video w-full min-h-[150px] object-cover"
       />
 
-      <div className="absolute bottom-3 left-3 bg-black/70 px-4 py-2 rounded-xl">
-        {name}
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+        <p className="truncate text-sm font-semibold">
+          {name}
+        </p>
       </div>
 
       {showStatus && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-slate-950/80 px-5 text-center text-sm text-gray-300">
-          <p>{peerStatus}</p>
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[#05070d]/88 px-5 text-center text-sm text-gray-300 backdrop-blur">
+          <p className="max-w-sm leading-6">
+            {peerStatus}
+          </p>
 
           {/closed|failed|blocked/i.test(peerStatus) && (
             <button
               onClick={onReconnect}
-              className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+              className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-sky-400"
             >
               Retry video
             </button>
@@ -1979,9 +2017,9 @@ const PendingParticipant = ({
   turnConfigured,
   onReconnect,
 }) => (
-  <div className="bg-slate-900 rounded-3xl overflow-hidden border border-slate-800 relative min-h-[300px] flex items-center justify-center">
+  <div className="relative flex min-h-[150px] items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-[#0b0f18]">
     <div className="text-center px-5">
-      <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-slate-800 text-2xl font-bold text-indigo-200">
+      <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-xl font-bold text-sky-200">
         {name?.charAt(0)?.toUpperCase() || "?"}
       </div>
 
@@ -1995,7 +2033,7 @@ const PendingParticipant = ({
 
       <button
         onClick={onReconnect}
-        className="mt-4 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+        className="mt-3 rounded-lg bg-sky-500 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-sky-400"
       >
         Retry video
       </button>

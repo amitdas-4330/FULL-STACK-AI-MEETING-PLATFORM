@@ -142,22 +142,22 @@ const Feedback = () => {
       <div className="mx-auto max-w-xl">
         <motion.form
           onSubmit={handleSubmit}
-          className="min-h-[640px] bg-slate-900 border border-slate-700 rounded-2xl p-6 sm:p-7 space-y-5 shadow-2xl shadow-black/30"
+          className="bg-slate-900 border border-slate-700 rounded-2xl p-5 sm:p-6 space-y-4 shadow-2xl shadow-black/30"
           initial={{ opacity: 0, x: 24 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.55, ease: "easeOut" }}
         >
-          <div className="border-b border-slate-800 pb-5 pr-12">
-            <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-300">
+          <div className="border-b border-slate-800 pb-4 pr-12">
+            <div className="mb-2 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-300">
               <FaCommentDots />
             </div>
 
-            <h2 className="text-2xl font-bold">
+            <h2 className="text-xl font-bold">
               Share your feedback
             </h2>
 
-            <p className="mt-2 text-sm leading-6 text-gray-400">
+            <p className="mt-1 text-sm leading-5 text-gray-400">
               Tell us how the meeting experience felt.
             </p>
           </div>
@@ -174,7 +174,7 @@ const Feedback = () => {
                   updateField("name", event.target.value)
                 }
                 placeholder="Your name"
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
               />
             </label>
 
@@ -190,7 +190,7 @@ const Feedback = () => {
                   updateField("email", event.target.value)
                 }
                 placeholder="you@example.com"
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
               />
             </label>
           </div>
@@ -205,7 +205,7 @@ const Feedback = () => {
                 onChange={(event) =>
                   updateField("type", event.target.value)
                 }
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
               >
                 {feedbackTypes.map((type) => (
                   <option
@@ -222,7 +222,7 @@ const Feedback = () => {
               <span className="block text-sm font-semibold text-gray-200 mb-2">
                 Rating
               </span>
-              <div className="flex items-center gap-1 rounded-xl bg-slate-950 border border-slate-700 px-3 py-3.5">
+              <div className="flex items-center gap-1 rounded-xl bg-slate-950 border border-slate-700 px-3 py-3">
                 {[1, 2, 3, 4, 5].map((rating) => (
                   <button
                     key={rating}
@@ -252,8 +252,8 @@ const Feedback = () => {
                 updateField("message", event.target.value)
               }
               placeholder="Write your feedback here..."
-              rows="8"
-              className="min-h-[190px] w-full resize-none bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+              rows="5"
+              className="min-h-[130px] w-full resize-none bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
             />
           </label>
 
@@ -271,7 +271,7 @@ const Feedback = () => {
 
           <button
             type="submit"
-            className="navbar-action flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3.5 font-semibold transition hover:bg-indigo-500"
+            className="navbar-action flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 font-semibold transition hover:bg-indigo-500"
           >
             <FaPaperPlane />
             Submit Feedback
