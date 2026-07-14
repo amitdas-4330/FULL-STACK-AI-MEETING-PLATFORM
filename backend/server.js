@@ -722,6 +722,40 @@ io.on("connection", (socket) => {
 
   });
 
+  socket.on("retry-video", (data) => {
+
+    const {
+      roomId,
+      targetSocketId,
+    } = data;
+
+    ensureRoom(roomId);
+
+    if (
+      !socket.data.rooms?.has(roomId) ||
+      !targetSocketId
+    ) {
+      return;
+    }
+
+    const targetInRoom =
+      meetingUsers[roomId].some(
+        (user) => user.socketId === targetSocketId
+      );
+
+    if (!targetInRoom) {
+      return;
+    }
+
+    io.to(targetSocketId).emit(
+      "retry-video-requested",
+      {
+        requesterSocketId: socket.id,
+      }
+    );
+
+  });
+
   // ======================================================
   // ================= ATTENDANCE SYSTEM ==================
   // ======================================================

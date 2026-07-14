@@ -990,6 +990,24 @@ const MeetingRoom = () => {
 
         });
 
+        socket.on("retry-video-requested", (payload) => {
+
+          const requesterSocketId =
+            payload?.requesterSocketId;
+
+          if (!requesterSocketId) {
+            return;
+          }
+
+          delete pendingSignalsRef.current[requesterSocketId];
+          removePeer(requesterSocketId);
+          setPeerStatusForId(
+            requesterSocketId,
+            "Waiting for retry offer..."
+          );
+
+        });
+
         socket.on("user-joined", (payload) => {
 
           const existingPeer =
@@ -1085,6 +1103,7 @@ const MeetingRoom = () => {
 
       socket.off("meeting-users");
       socket.off("user-left");
+      socket.off("retry-video-requested");
       socket.off("user-joined");
       socket.off("receiving-returned-signal");
 
@@ -1202,37 +1221,12 @@ const MeetingRoom = () => {
         }
       );
 
-      if (missingParticipants.length && localStreamRef.current) {
-        socket.emit("sync-meeting-users", {
-          roomId,
-        });
-      }
-
       missingParticipants.forEach((participant) => {
 
-        if (reconnectTimersRef.current[participant.socketId]) {
-          return;
-        }
-
-        reconnectTimersRef.current[participant.socketId] =
-          setTimeout(() => {
-
-            delete reconnectTimersRef.current[
-              participant.socketId
-            ];
-
-            const userToConnect =
-              knownUsersRef.current.find(
-                (knownUser) =>
-                  knownUser.socketId === participant.socketId
-              ) || participant;
-
-            createPeerForUser(
-              userToConnect,
-              localStreamRef.current
-            );
-
-          }, 1000);
+        setPeerStatusForId(
+          participant.socketId,
+          "Waiting for video offer..."
+        );
 
       });
     });
@@ -1334,7 +1328,13 @@ const MeetingRoom = () => {
       reconnectTimersRef.current = {};
     };
 
-  }, [createPeerForUser, navigate, roomId, stopLocalMeeting]);
+  }, [
+    createPeerForUser,
+    navigate,
+    roomId,
+    setPeerStatusForId,
+    stopLocalMeeting,
+  ]);
 
   const sendMessage = () => {
 
